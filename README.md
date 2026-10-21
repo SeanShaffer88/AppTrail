@@ -4,6 +4,18 @@
 
 [Download for Windows x64](https://github.com/SeanShaffer88/AppTrail/releases/latest) · [Report a bug](https://github.com/SeanShaffer88/AppTrail/issues) · [MIT license](LICENSE)
 
+## See it in action
+
+Compare two snapshots to see added, removed, and modified files, with a summary of the evidence for each change.
+
+![AppTrail comparison view showing one added plugin, one removed plugin, and a modified settings file](docs/screenshots/comparison.jpg)
+
+Double-click a file to inspect its before-and-after hashes, sizes, timestamps, and available binary metadata. This example shows the evidence for a changed settings file.
+
+![AppTrail file evidence window showing different SHA-256 hashes and sizes before and after a settings file changed](docs/screenshots/file-evidence.jpg)
+
+Screenshots show AppTrail 0.1.0 on Windows using the included demo snapshots. The screenshots are unedited captures of the running application.
+
 ## Download and run
 
 1. Open the [latest release](https://github.com/SeanShaffer88/AppTrail/releases/latest).
