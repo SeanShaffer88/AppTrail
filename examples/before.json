@@ -1,0 +1,58 @@
+{
+  "schema": "apptrail.snapshot.v1",
+  "root": "C:\\ExampleApps\\AppTrailDemo",
+  "started_at": "2026-10-21T23:36:19+00:00",
+  "completed_at": "2026-10-21T23:36:19+00:00",
+  "files": [
+    {
+      "path": "demo.exe",
+      "size": 105696,
+      "mtime_ns": 1791568344000000000,
+      "sha256": "727b92dc55e1ac0f17a48cbd20557427fdb8d9f50731de0355c4fd4c08d2f473",
+      "version": "3.15.150.1013",
+      "pe": {
+        "architecture": "x64",
+        "imports": [
+          "api-ms-win-crt-heap-l1-1-0.dll",
+          "api-ms-win-crt-locale-l1-1-0.dll",
+          "api-ms-win-crt-math-l1-1-0.dll",
+          "api-ms-win-crt-runtime-l1-1-0.dll",
+          "api-ms-win-crt-stdio-l1-1-0.dll",
+          "KERNEL32.dll",
+          "python315.dll",
+          "VCRUNTIME140.dll"
+        ],
+        "delay_imports": []
+      },
+      "error": null
+    },
+    {
+      "path": "retired-plugin.txt",
+      "size": 27,
+      "mtime_ns": 1792625779343225500,
+      "sha256": "15b85d910dc782b6783d2aed386db7107bde3ca3d48a11fd6e0354a4daba01cb",
+      "version": null,
+      "pe": null,
+      "error": null
+    },
+    {
+      "path": "settings.json",
+      "size": 35,
+      "mtime_ns": 1792625779343225500,
+      "sha256": "9aed57cd344c6359ffddcf356b4cd629a474c1c20438cd4d155097e513e2a6c0",
+      "version": null,
+      "pe": null,
+      "error": null
+    },
+    {
+      "path": "unchanged.txt",
+      "size": 30,
+      "mtime_ns": 1792625779343225500,
+      "sha256": "08cc2a37c685512714a3be44b1b72ce5e757dfd7ab1c2f47be2f9812917fd710",
+      "version": null,
+      "pe": null,
+      "error": null
+    }
+  ],
+  "warnings": []
+}
