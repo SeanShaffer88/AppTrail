@@ -82,11 +82,13 @@ def main():
     executable = output / 'AppTrail.exe'
     checksum = hashlib.sha256(executable.read_bytes()).hexdigest()
     (output / 'SHA256SUMS.txt').write_text(f'{checksum}  AppTrail.exe\n', encoding='utf-8')
-    manifest = {'app': 'AppTrail', 'version': '0.1.0', 'target': 'Windows x64',
+    sys.path.insert(0, str(source))
+    from apptrail import __version__
+    manifest = {'app': 'AppTrail', 'version': __version__, 'target': 'Windows x64',
                 'python': sys.version, 'pyinstaller': version('pyinstaller'),
                 'sha256': checksum, 'bytes': executable.stat().st_size}
     (output / 'build-info.json').write_text(json.dumps(manifest, indent=2), encoding='utf-8')
-    archive = output.parent / 'AppTrail-0.1-Windows-x64.zip'
+    archive = output.parent / f'AppTrail-{__version__}-Windows-x64.zip'
     with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as bundle:
         for path in sorted(output.rglob('*')):
             if path.is_file():

@@ -6,6 +6,10 @@
 
 ## See it in action
 
+Browse saved snapshots and choose captures to compare without selecting JSON files each time.
+
+![AppTrail snapshot history showing saved application captures with dates, folders, file counts, and comparison controls](docs/screenshots/history.jpg)
+
 Compare two snapshots to see added, removed, and modified files, with a summary of the evidence for each change.
 
 ![AppTrail comparison view showing one added plugin, one removed plugin, and a modified settings file](docs/screenshots/comparison.jpg)
@@ -14,26 +18,36 @@ Double-click a file to inspect its before-and-after hashes, sizes, timestamps, a
 
 ![AppTrail file evidence window showing different SHA-256 hashes and sizes before and after a settings file changed](docs/screenshots/file-evidence.jpg)
 
-Screenshots show AppTrail 0.1.0 on Windows using the included demo snapshots. The screenshots are unedited captures of the running application.
+The history screenshot shows AppTrail 0.2.0; the comparison and evidence screenshots show 0.1.0. All are unedited Windows captures using demo snapshots.
 
 ## Download and run
 
 1. Open the [latest release](https://github.com/SeanShaffer88/AppTrail/releases/latest).
-2. Download **AppTrail-0.1-Windows-x64.zip**, extract it, and double-click **AppTrail.exe**. A direct EXE download is also available.
+2. Download **AppTrail-0.2.0-Windows-x64.zip**, extract it, and double-click **AppTrail.exe**. A direct EXE download is also available.
 3. No Python installation, command window, administrator access, or account is required. Keep the license notices with copies you redistribute.
 
 The current executable is an unsigned Windows x64 build, tested on Windows 11 x64. Other Windows versions and native ARM64 execution have not been validated. The bundled runtime extracts into the temporary directory at launch and normally cleans up on exit.
 
 ## Capture, compare, report
 
-1. Choose an application folder and save a baseline snapshot **outside that folder**.
-2. After making changes, capture the folder again using a different snapshot filename.
-3. Select the **Before** and **After** snapshots and click **Compare snapshots**.
+1. Choose an application folder and click **Capture to history**. No save dialog is needed.
+2. After making changes, capture the folder again. Both snapshots appear in **Snapshot history**.
+3. Select two rows using Ctrl-click or Shift-click, then click **Compare selected (2)**. The older capture becomes **Before** and the newer becomes **After**. Use **Use as Before** / **Use as After** to set the order manually, then compare on the Comparison tab.
 4. Double-click a file to inspect its evidence, or click **Export HTML report** to save a standalone report.
 
 You can compare the same application in different folder locations or on different computers. File matching uses case-insensitive relative paths, following normal Windows conventions. AppTrail runs locally; it has no telemetry or cloud upload feature.
 
 Try the included [before](examples/before.json) and [after](examples/after.json) example snapshots, or download the [example HTML report](examples/AppTrail-example-report.html). Example root paths are illustrative.
+
+### Snapshot history
+
+History persists across restarts under `%LOCALAPPDATA%\AppTrail\history` on Windows, independently of the EXE's location. The library stores its own JSON copies and a SQLite catalog. It shows application folder, capture time (local time), file count, and capture issues, with a filter for application, folder, or date.
+
+Use **Import JSON…** once to add existing snapshots, including the demo pair. Identical imports are deduplicated. Moving or deleting the original imported JSON does not break history. Missing library copies are flagged; reimporting the original restores them. AppTrail rejects library JSON modified outside the app rather than silently trusting changed evidence.
+
+**Save JSON…** exports a capture to a location you choose and also adds it to history. Manual JSON selection remains on the **Comparison** tab. Existing v1 snapshot JSON files remain compatible. The source CLI continues to save only to the path you specify; import those snapshots into the desktop history when desired.
+
+History contains local paths and metadata. Back up the entire history directory while AppTrail is closed if you want to retain the library elsewhere. No history is automatically uploaded, deleted, or synchronized.
 
 ## What it captures
 

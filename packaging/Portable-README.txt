@@ -1,4 +1,4 @@
-AppTrail 0.1 — Windows x64 portable edition
+AppTrail 0.2.0 — Windows x64 portable edition
 
 Source and updates: https://github.com/SeanShaffer88/AppTrail
 AppTrail source is MIT licensed. See licenses/AppTrail-MIT.txt.
@@ -6,10 +6,18 @@ AppTrail source is MIT licensed. See licenses/AppTrail-MIT.txt.
 Double-click AppTrail.exe. No Python installation, command window, administrator
 access, or installer is needed. You can move the EXE to another folder.
 
-1. Choose an application folder and save a baseline snapshot outside that folder.
-2. Capture the folder again after changes; use a different snapshot filename.
-3. Choose the Before and After snapshots and click Compare snapshots.
+1. Choose an application folder and click Capture to history.
+2. Capture the folder again after changes. Both captures stay in Snapshot history.
+3. Select two history rows (Ctrl-click) and click Compare selected (2).
 4. Click Export HTML report to save a readable report.
+
+Use Import JSON to bring existing snapshots into history. Imports keep a local
+copy and identical imports are deduplicated. Save JSON also creates a history
+entry. Use as Before / Use as After lets you choose comparison order manually.
+The history library persists across restarts in:
+%LOCALAPPDATA%\AppTrail\history
+It contains snapshot JSON files and a SQLite catalog. It is separate from the
+portable EXE; moving or updating the EXE keeps the same user's history.
 
 The EXE contains Python and Tcl/Tk and extracts its runtime into a temporary
 directory while running. First launch can take a few seconds. The temporary

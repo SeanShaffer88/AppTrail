@@ -1,6 +1,7 @@
 """Self-contained reports. All captured strings are escaped as text."""
 from html import escape
 from .core import atomic_write
+from . import __version__
 
 
 def render_html(comparison):
@@ -62,7 +63,7 @@ footer{{margin-top:28px;color:#596b80;font-size:13px}}@media(max-width:650px){{.
 <div class="cards">{cards}</div><div class="roots">{roots}</div>{warning_html}
 <h2>Changes and evidence</h2><table><thead><tr><th>Result</th><th>File and observations</th></tr></thead>
 <tbody>{''.join(rows) or '<tr><td colspan="2">No differences found in captured files.</td></tr>'}</tbody></table>
-<footer>AppTrail 0.1 · Times use UTC. Snapshots are sequential observations, not atomic backups.
+<footer>AppTrail {__version__} · Times use UTC. Snapshots are sequential observations, not atomic backups.
 Added/removed means present in only one capture; unreadable directories can affect those results.
 Renames appear as removal and addition. Imports are static declarations, including delay imports; they do not prove a DLL is missing or was loaded.
 Architecture changes are observations, not a diagnosis; managed AnyCPU behavior is not inferred.
