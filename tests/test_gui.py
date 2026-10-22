@@ -209,6 +209,35 @@ class HistoryGuiTests(unittest.TestCase):
             path.write_text(value)
             self.assertEqual(Theme(self.root, path).mode.get(), 'dark')
 
+    def test_word_highlights_survive_theme_endings_and_navigation(self):
+        from apptrail.gui import TextDiffWindow
+        from apptrail.theme import PALETTES
+        from tests.test_side_diff import change
+        window = TextDiffWindow(self.root, change('label = "😀"; return 2\r\n', 'label = "😀"; return 4\n'))
+        try:
+            left, right = window.side_texts
+            self.assertEqual(left.get(*left.tag_ranges('word_change')[:2]), '2')
+            self.assertEqual(right.get(*right.tag_ranges('word_change')[:2]), '4')
+            self.assertEqual(right.get(*right.tag_ranges('syntax_keyword')[:2]), 'return')
+            window.jump_change(1)
+            window.show_endings.set(True)
+            window.refresh_diff()
+            ranges = right.tag_ranges('word_change')
+            self.assertIn('⟦LF⟧', right.get(ranges[-2], ranges[-1]))
+            self.app.theme.toggle()
+            self.assertEqual(right.tag_cget('word_change', 'background'), PALETTES['light']['word_add'])
+            window.show_words.set(False)
+            window.refresh_diff()
+            self.assertFalse(right.tag_ranges('word_change'))
+            self.assertTrue(right.tag_ranges('changed'))
+            self.assertTrue(right.tag_ranges('syntax_keyword'))
+            self.assertEqual(window.position.get(), 'Change 1 of 1')
+            window.show_words.set(True)
+            window.refresh_diff()
+            self.assertTrue(right.tag_ranges('word_change'))
+        finally:
+            window.destroy()
+
     def test_side_diff_navigation_numbers_and_synchronized_scrolling(self):
         from apptrail.gui import TextDiffWindow
         from tests.test_side_diff import change

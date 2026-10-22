@@ -557,8 +557,13 @@ class TextDiffWindow(tk.Toplevel):
         ttk.Label(frame, text='Before: ' + self.model['before_summary'], wraplength=950, style='Subtitle.TLabel').pack(anchor='w')
         ttk.Label(frame, text='After: ' + self.model['after_summary'], wraplength=950, style='Subtitle.TLabel').pack(anchor='w', pady=(0, 8))
         self.show_endings = tk.BooleanVar(value=False)
-        ttk.Checkbutton(frame, text='Show line endings (CRLF / LF / CR / no final newline)',
-                        variable=self.show_endings, command=self.refresh_diff).pack(anchor='w', pady=(0, 8))
+        self.show_words = tk.BooleanVar(value=True)
+        controls = ttk.Frame(frame)
+        controls.pack(fill='x', pady=(0, 8))
+        ttk.Checkbutton(controls, text='Show line endings (CRLF / LF / CR / no final newline)',
+                        variable=self.show_endings, command=self.refresh_diff).pack(side='left')
+        ttk.Checkbutton(controls, text='Highlight changed words', variable=self.show_words,
+                        command=self.refresh_diff).pack(side='right')
         self.tabs = ttk.Notebook(frame)
         self.tabs.pack(fill='both', expand=True)
         side_frame = ttk.Frame(self.tabs)
@@ -626,7 +631,7 @@ class TextDiffWindow(tk.Toplevel):
         details.pack(fill='both', expand=True)
         details.insert('1.0', json.dumps(metadata, indent=2, ensure_ascii=False))
         details.configure(state='disabled')
-        ttk.Label(frame, text='Saved evidence only · green = added, red = removed · F7 / Shift+F7 jump between changes',
+        ttk.Label(frame, text='Saved evidence only · stronger color = changed words · F7 / Shift+F7 jump between changes',
                   style='Subtitle.TLabel', wraplength=950).pack(before=self.tabs, side='bottom', anchor='w', pady=(8, 0))
         self.refresh_diff()
         theme = getattr(parent, '_apptrail_theme', None)
@@ -683,6 +688,14 @@ class TextDiffWindow(tk.Toplevel):
                         a = int(widget.tk.call('string', 'length', content[:start])) + 7
                         b = int(widget.tk.call('string', 'length', content[:end])) + 7
                         widget.tag_add('syntax_' + category, f'{display_row}.{a}', f'{display_row}.{b}')
+                    if self.show_words.get():
+                        for start, end in row[side + '_words']:
+                            a = int(widget.tk.call('string', 'length', content[:start])) + 7
+                            b = int(widget.tk.call('string', 'length', content[:end])) + 7
+                            widget.tag_add('word_change', f'{display_row}.{a}', f'{display_row}.{b}')
+                        if row['ending_changed'] and self.show_endings.get():
+                            start = int(widget.tk.call('string', 'length', content)) + 7
+                            widget.tag_add('word_change', f'{display_row}.{start}', f'{display_row}.end')
             widget.configure(state='disabled')
         state = 'normal' if self.aligned['changes'] else 'disabled'
         self.previous_button.configure(state=state)

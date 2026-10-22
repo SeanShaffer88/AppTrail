@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.0 — 2026-10-21
+
+- Word-level highlighting within paired modified lines, including numbers, punctuation, whitespace, and Unicode identifiers.
+- Stronger changed-region backgrounds in dark/light themes preserve syntax colors. A toggle switches back to line-only shading.
+- Changed line-ending markers are emphasized when visible. Bounded fallback handles very long or repetitive input.
+
 ## 0.6.0 — 2026-10-21
 
 - Terminal-inspired dark theme by default, with a persistent dark/light toggle at the top right. Diff and snapshot notes windows update with the app theme.

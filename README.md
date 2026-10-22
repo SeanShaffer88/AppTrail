@@ -31,7 +31,7 @@ The text diff screenshot shows AppTrail 0.4.0; history/editor show 0.3.0, and th
 ## Download and run
 
 1. Open the [latest release](https://github.com/SeanShaffer88/AppTrail/releases/latest).
-2. Download **AppTrail-0.6.0-Windows-x64.zip**, extract it, and double-click **AppTrail.exe**. A direct EXE download is also available.
+2. Download **AppTrail-0.7.0-Windows-x64.zip**, extract it, and double-click **AppTrail.exe**. A direct EXE download is also available.
 3. No Python installation, command window, administrator access, or account is required. Keep the license notices with copies you redistribute.
 
 The current executable is an unsigned Windows x64 build, tested on Windows 11 x64. Other Windows versions and native ARM64 execution have not been validated. The bundled runtime extracts into the temporary directory at launch and normally cleans up on exit.
@@ -178,3 +178,11 @@ The side-by-side view colors keywords, comments, strings, numbers, functions, an
 ![Terminal dark theme with syntax-highlighted source diff](docs/screenshots/terminal-syntax.jpg)
 
 ![Terminal dark application theme and appearance toggle](docs/screenshots/terminal-theme.jpg)
+
+### See changes within a line
+
+**Highlight changed words** is enabled by default in the side-by-side view. Paired modified rows show stronger red/green backgrounds on changed words, numbers, punctuation, and whitespace while preserving syntax colors. Inserted/deleted text is emphasized on the side where it exists; entirely added/removed rows keep their full-line backgrounds. Words (including Unicode identifiers) are compared as units. Paired rows follow the existing positional alignment within a replacement block.
+
+Turn the toggle off for line-only shading. With **Show line endings** enabled, changed CRLF/LF/CR or missing-final-newline markers are emphasized too. Very long or repetitive comparisons use a bounded shared-prefix/suffix fallback that highlights the differing middle region. No live files are read and no snapshot schema changes are needed.
+
+![Changed words within syntax-highlighted lines](docs/screenshots/word-diff.jpg)

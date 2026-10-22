@@ -1,4 +1,4 @@
-AppTrail 0.6.0 — Windows x64 portable edition
+AppTrail 0.7.0 — Windows x64 portable edition
 
 Source and updates: https://github.com/SeanShaffer88/AppTrail
 AppTrail source is MIT licensed. See licenses/AppTrail-MIT.txt.
@@ -63,3 +63,5 @@ embedded in the EXE. Keep the notices with copies you redistribute.
 SHA256SUMS.txt records the checksum of the executable.
 
 Appearance: Terminal dark theme is the default. Toggle it at the top right; your choice is saved locally. Source/config side-by-side diffs include offline syntax colors. Pygments license: licenses/Pygments-BSD.txt.
+
+Word diffs: Highlight changed words is enabled in Side by side. Stronger red/green backgrounds identify changed words, punctuation, and whitespace in paired modified rows. Turn it off for line-only shading. Show line endings also emphasizes changed newline markers.

@@ -1,6 +1,7 @@
 """Bounded source/config text capture and diffs of saved evidence, never live files."""
 import difflib
 import hashlib
+import re
 from pathlib import PurePosixPath
 
 MAX_TEXT_BYTES = 256 * 1024
@@ -163,6 +164,36 @@ def diff_text(model, show_endings=False):
     return ''.join(output)
 
 
+def word_changes(before, after, budget=200000):
+    """Find changed words, punctuation, and whitespace within a paired row.
+
+    Keep words intact (including Unicode identifiers). Bound matcher work for
+    repetitive/minified input, falling back to the differing middle region.
+    Offsets are Python character offsets into the displayed saved line.
+    """
+    before, after = before.rstrip('\r\n'), after.rstrip('\r\n')
+    left = list(re.finditer(r'\w+|\s+|[^\w\s]', before))
+    right = list(re.finditer(r'\w+|\s+|[^\w\s]', after))
+    cost = len(left) * len(right)
+    if cost > budget:
+        prefix = 0
+        while prefix < min(len(before), len(after)) and before[prefix] == after[prefix]:
+            prefix += 1
+        tail = 0
+        while tail < min(len(before), len(after)) - prefix and before[-tail - 1] == after[-tail - 1]:
+            tail += 1
+        return ([(prefix, len(before) - tail)] if prefix < len(before) - tail else [],
+                [(prefix, len(after) - tail)] if prefix < len(after) - tail else [], 0)
+    removed, added = [], []
+    for kind, a, b, c, d in difflib.SequenceMatcher(None, [m.group() for m in left], [m.group() for m in right], autojunk=False).get_opcodes():
+        if kind != 'equal':
+            if a < b:
+                removed.append((left[a].start(), left[b - 1].end()))
+            if c < d:
+                added.append((right[c].start(), right[d - 1].end()))
+    return removed, added, cost
+
+
 def side_by_side(change):
     """Align saved lines, preserving real line numbers and blank spacer rows."""
     if build_diff(change)['state'] != 'available':
@@ -172,16 +203,24 @@ def side_by_side(change):
         return (content[1:] if content.startswith('\ufeff') else content).splitlines(keepends=True)
     before, after = lines(change.get('before')), lines(change.get('after'))
     rows, changes = [], []
+    word_budget = 1000000
     for kind, a, b, c, d in difflib.SequenceMatcher(None, before, after, autojunk=False).get_opcodes():
         if kind != 'equal':
             changes.append(len(rows) + 1)
         for offset in range(max(b - a, d - c)):
             left, right = a + offset, c + offset
-            rows.append({'before_number': left + 1 if left < b else None,
+            row = {'before_number': left + 1 if left < b else None,
                          'after_number': right + 1 if right < d else None,
                          'before': before[left] if left < b else None,
                          'after': after[right] if right < d else None,
-                         'kind': kind})
+                   'kind': kind, 'before_words': [], 'after_words': [], 'ending_changed': False}
+            if kind == 'replace' and row['before'] is not None and row['after'] is not None:
+                removed, added, cost = word_changes(row['before'], row['after'], min(word_budget, 200000))
+                word_budget -= cost
+                row['before_words'], row['after_words'] = removed, added
+                row['ending_changed'] = (row['before'][len(row['before'].rstrip('\r\n')):] !=
+                                         row['after'][len(row['after'].rstrip('\r\n')):])
+            rows.append(row)
     return {'rows': rows, 'changes': changes}
 
 
