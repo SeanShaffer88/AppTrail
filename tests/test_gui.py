@@ -238,6 +238,67 @@ class HistoryGuiTests(unittest.TestCase):
         finally:
             window.destroy()
 
+    def test_search_navigation_refresh_clear_and_theme(self):
+        from apptrail.gui import TextDiffWindow
+        from apptrail.theme import PALETTES
+        from tests.test_side_diff import change
+        window = TextDiffWindow(self.root, change('😀 Build build\n', '😀 build new\n'))
+        try:
+            window.search_query.set('build')
+            window.update_search()
+            self.assertEqual(len(window.search_matches), 3)
+            self.assertEqual(window.search_status.get(), 'Match 1 of 3 · Before line 1')
+            left, right = window.side_texts
+            self.assertEqual(left.get(*left.tag_ranges('search_current')), 'Build')
+            window.jump_match(1)
+            self.assertEqual(left.get(*left.tag_ranges('search_current')), 'build')
+            window.jump_match(1)
+            self.assertEqual(window.search_status.get(), 'Match 3 of 3 · After line 1')
+            self.assertEqual(right.get(*right.tag_ranges('search_current')), 'build')
+            self.app.theme.toggle()
+            self.assertEqual(right.tag_cget('search_current', 'background'), PALETTES['light']['search_active'])
+            window.show_words.set(False)
+            window.show_endings.set(True)
+            window.refresh_diff()
+            self.assertEqual(window.match_index, 2)
+            self.assertTrue(right.tag_ranges('search_current'))
+            window.jump_match(1)
+            self.assertEqual(window.match_index, 0)
+            window.jump_match(-1)
+            self.assertEqual(window.match_index, 2)
+            window.match_case.set(True)
+            window.search_query.set('Build')
+            window.update_search()
+            self.assertEqual(len(window.search_matches), 1)
+            window.search_query.set('missing')
+            window.update_search()
+            self.assertEqual(window.search_status.get(), 'No matches in saved text')
+            self.assertIn('disabled', window.next_match.state())
+            window.clear_search()
+            self.assertFalse(left.tag_ranges('search_match'))
+            self.assertFalse(right.tag_ranges('search_current'))
+        finally:
+            window.destroy()
+
+    def test_search_reveals_offscreen_match_and_cancels_pending_on_close(self):
+        from apptrail.gui import TextDiffWindow
+        from tests.test_side_diff import change
+        before = ''.join(f'row {i}\n' for i in range(100))
+        after = before + ' ' * 200 + 'needle\n'
+        window = TextDiffWindow(self.root, change(before, after))
+        self.root.update()
+        window.search_query.set('needle')
+        window.jump_match(-1)
+        self.root.update()
+        self.assertEqual(window.search_status.get(), 'Match 1 of 1 · After line 101')
+        self.assertTrue(window.side_texts[1].bbox('101.207'))
+        window.search_query.set('row')
+        pending = window.search_pending
+        self.assertIsNotNone(pending)
+        window.destroy()
+        self.assertIsNone(window.search_pending)
+        self.assertNotIn(pending, self.root.tk.call('after', 'info'))
+
     def test_side_diff_navigation_numbers_and_synchronized_scrolling(self):
         from apptrail.gui import TextDiffWindow
         from tests.test_side_diff import change

@@ -31,7 +31,7 @@ The text diff screenshot shows AppTrail 0.4.0; history/editor show 0.3.0, and th
 ## Download and run
 
 1. Open the [latest release](https://github.com/SeanShaffer88/AppTrail/releases/latest).
-2. Download **AppTrail-0.7.0-Windows-x64.zip**, extract it, and double-click **AppTrail.exe**. A direct EXE download is also available.
+2. Download **AppTrail-0.8.0-Windows-x64.zip**, extract it, and double-click **AppTrail.exe**. A direct EXE download is also available.
 3. No Python installation, command window, administrator access, or account is required. Keep the license notices with copies you redistribute.
 
 The current executable is an unsigned Windows x64 build, tested on Windows 11 x64. Other Windows versions and native ARM64 execution have not been validated. The bundled runtime extracts into the temporary directory at launch and normally cleans up on exit.
@@ -186,3 +186,11 @@ The side-by-side view colors keywords, comments, strings, numbers, functions, an
 Turn the toggle off for line-only shading. With **Show line endings** enabled, changed CRLF/LF/CR or missing-final-newline markers are emphasized too. Very long or repetitive comparisons use a bounded shared-prefix/suffix fallback that highlights the differing middle region. No live files are read and no snapshot schema changes are needed.
 
 ![Changed words within syntax-highlighted lines](docs/screenshots/word-diff.jpg)
+
+### Find text in both snapshots
+
+Press **Ctrl+F** in the diff window or use **Find** above the side-by-side panes. Search is literal and case-insensitive by default; enable **Match case** for exact case. Matches in both saved snapshots are highlighted. **◀ Match / Match ▶**, **F3 / Shift+F3**, or **Enter / Shift+Enter** in the search box move between matches with wraparound. The counter identifies the Before/After side and original line number. Navigation scrolls to offscreen matches, including horizontally. **Clear**, or **Escape** in the search box, removes highlights.
+
+Search reads saved file text only, excluding gutters, spacer rows, newline markers, and metadata. Identical occurrences in both snapshots count separately; navigation follows row order, Before then After. Matches are single-line and non-overlapping. Highlighting survives theme and diff-display changes. At most 10,000 matches are shown; the counter explicitly prompts you to refine a query if more exist. No snapshot format changes are required.
+
+![Search matches in both snapshots](docs/screenshots/diff-search.jpg)

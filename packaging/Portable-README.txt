@@ -1,4 +1,4 @@
-AppTrail 0.7.0 — Windows x64 portable edition
+AppTrail 0.8.0 — Windows x64 portable edition
 
 Source and updates: https://github.com/SeanShaffer88/AppTrail
 AppTrail source is MIT licensed. See licenses/AppTrail-MIT.txt.
@@ -65,3 +65,5 @@ SHA256SUMS.txt records the checksum of the executable.
 Appearance: Terminal dark theme is the default. Toggle it at the top right; your choice is saved locally. Source/config side-by-side diffs include offline syntax colors. Pygments license: licenses/Pygments-BSD.txt.
 
 Word diffs: Highlight changed words is enabled in Side by side. Stronger red/green backgrounds identify changed words, punctuation, and whitespace in paired modified rows. Turn it off for line-only shading. Show line endings also emphasizes changed newline markers.
+
+Search: Ctrl+F focuses Find in the side-by-side view. Search both saved snapshots; use Match case if needed. Match buttons, F3/Shift+F3, or Enter/Shift+Enter navigate with wraparound. Clear or Escape in Find removes highlights. The counter shows side and original line. Queries are literal, single-line, non-overlapping; refine if the 10,000-match limit is reached.

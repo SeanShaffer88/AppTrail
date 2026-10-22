@@ -12,6 +12,7 @@ from .history import SnapshotHistory
 from .textdiff import build_diff, diff_text, side_by_side, side_line
 from .syntax import highlight_lines
 from .theme import Theme
+from .search import find_matches
 
 
 class AppTrail:
@@ -577,6 +578,34 @@ class TextDiffWindow(tk.Toplevel):
         self.position = tk.StringVar(value=f'{len(self.aligned["changes"])} change(s)')
         ttk.Label(toolbar, textvariable=self.position).pack(side='left')
         ttk.Label(toolbar, text=self.syntax['after'][0] + ' · syntax colors', style='Subtitle.TLabel').pack(side='right')
+        searchbar = ttk.Frame(side_frame)
+        searchbar.pack(fill='x', pady=(0, 6))
+        ttk.Label(searchbar, text='Find:').pack(side='left')
+        self.search_query = tk.StringVar()
+        self.match_case = tk.BooleanVar(value=False)
+        self.search_entry = ttk.Entry(searchbar, textvariable=self.search_query, width=24)
+        self.search_entry.pack(side='left', fill='x', expand=True, padx=6)
+        ttk.Checkbutton(searchbar, text='Match case', variable=self.match_case,
+                        command=self.schedule_search).pack(side='left', padx=4)
+        self.previous_match = ttk.Button(searchbar, text='◀ Match', command=lambda: self.jump_match(-1), state='disabled')
+        self.previous_match.pack(side='left')
+        self.next_match = ttk.Button(searchbar, text='Match ▶', command=lambda: self.jump_match(1), state='disabled')
+        self.next_match.pack(side='left', padx=6)
+        ttk.Button(searchbar, text='Clear', command=self.clear_search).pack(side='left')
+        self.search_status = tk.StringVar(value='Search both snapshots · Ctrl+F · F3 / Shift+F3')
+        ttk.Label(side_frame, textvariable=self.search_status, style='Subtitle.TLabel').pack(anchor='w', pady=(0, 6))
+        self.search_matches = []
+        self.match_index = -1
+        self.search_pending = None
+        self.search_query.trace_add('write', lambda *_: self.schedule_search())
+        self.search_entry.bind('<Return>', lambda event: self.jump_match(1))
+        self.search_entry.bind('<Shift-Return>', lambda event: self.jump_match(-1))
+        self.search_entry.bind('<Escape>', lambda event: self.clear_search())
+        self.bind('<Control-f>', self.focus_search)
+        self.bind('<Control-F>', self.focus_search)
+        self.bind('<F3>', lambda event: self.jump_match(1))
+        self.bind('<Shift-F3>', lambda event: self.jump_match(-1))
+        self.bind('<Destroy>', self.cancel_search)
         panes = ttk.Frame(side_frame)
         panes.pack(fill='both', expand=True)
         self.side_texts = []
@@ -637,6 +666,87 @@ class TextDiffWindow(tk.Toplevel):
         theme = getattr(parent, '_apptrail_theme', None)
         if theme:
             theme.paint(self)
+
+    def focus_search(self, event=None):
+        self.tabs.select(0)
+        self.search_entry.focus_set()
+        self.search_entry.selection_range(0, 'end')
+        return 'break'
+
+    def cancel_search(self, event=None):
+        if event is not None and event.widget is not self:
+            return
+        if self.search_pending is not None:
+            self.after_cancel(self.search_pending)
+            self.search_pending = None
+
+    def schedule_search(self):
+        self.cancel_search()
+        self.search_matches = []
+        self.match_index = -1
+        for widget in self.side_texts:
+            widget.tag_remove('search_match', '1.0', 'end')
+            widget.tag_remove('search_current', '1.0', 'end')
+        self.previous_match.configure(state='disabled')
+        self.next_match.configure(state='disabled')
+        self.search_status.set('Searching…' if self.search_query.get() else 'Search both snapshots · Ctrl+F · F3 / Shift+F3')
+        self.search_pending = self.after(180, self.update_search)
+
+    def update_search(self, preserve=False):
+        self.cancel_search()
+        old_index = self.match_index if preserve else 0
+        self.search_matches, self.search_limited = find_matches(self.aligned['rows'], self.search_query.get(), self.match_case.get())
+        for widget in self.side_texts:
+            widget.tag_remove('search_match', '1.0', 'end')
+            widget.tag_remove('search_current', '1.0', 'end')
+        for match in self.search_matches:
+            widget, start, end = self.match_range(match)
+            widget.tag_add('search_match', start, end)
+        state = 'normal' if self.search_matches else 'disabled'
+        self.previous_match.configure(state=state)
+        self.next_match.configure(state=state)
+        if self.search_matches:
+            self.show_match(max(0, min(old_index, len(self.search_matches) - 1)), reveal=not preserve)
+        else:
+            self.match_index = -1
+            self.search_status.set('No matches in saved text' if self.search_query.get() else 'Search both snapshots · Ctrl+F · F3 / Shift+F3')
+
+    def match_range(self, match):
+        widget = self.side_texts[0 if match['side'] == 'before' else 1]
+        content = self.aligned['rows'][match['row'] - 1][match['side']].rstrip('\r\n')
+        start = int(widget.tk.call('string', 'length', content[:match['start']])) + 7
+        end = int(widget.tk.call('string', 'length', content[:match['end']])) + 7
+        return widget, f'{match["row"]}.{start}', f'{match["row"]}.{end}'
+
+    def show_match(self, index, reveal=True):
+        self.match_index = index
+        match = self.search_matches[index]
+        for widget in self.side_texts:
+            widget.tag_remove('search_current', '1.0', 'end')
+        widget, start, end = self.match_range(match)
+        widget.tag_add('search_current', start, end)
+        widget.tag_raise('search_match')
+        widget.tag_raise('search_current')
+        if reveal:
+            self.tabs.select(0)
+            widget.see(start)
+        total = str(len(self.search_matches)) + ('+' if self.search_limited else '')
+        suffix = ' · limit reached; refine search' if self.search_limited else ''
+        self.search_status.set(f'Match {index + 1} of {total} · {match["side"].title()} line {match["line"]}{suffix}')
+
+    def jump_match(self, direction):
+        if self.search_pending is not None:
+            self.update_search()
+            if direction < 0 and self.search_matches:
+                self.show_match(len(self.search_matches) - 1)
+        elif self.search_matches:
+            self.show_match((self.match_index + direction) % len(self.search_matches))
+        return 'break'
+
+    def clear_search(self):
+        self.search_query.set('')
+        self.update_search()
+        return 'break'
 
     def scroll_sides(self, *args):
         for widget in self.side_texts:
@@ -712,6 +822,7 @@ class TextDiffWindow(tk.Toplevel):
                 rendered = diff_text({'lines': [line]}, self.show_endings.get())
                 self.text.insert('end', rendered, (line['kind'],))
         self.text.configure(state='disabled')
+        self.update_search(preserve=True)
 
 
 class SnapshotEditor(tk.Toplevel):

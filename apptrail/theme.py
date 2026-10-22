@@ -8,11 +8,13 @@ PALETTES = {
     'dark': dict(bg='#0c0c0c', panel='#202020', field='#161616', fg='#cccccc', muted='#aaaaaa',
                  select='#264f78', accent='#61afef', add='#153820', remove='#482026', spacer='#252525',
                  word_add='#245b35', word_remove='#75323e',
+                 search='#66551c', search_active='#f2cf66', search_text='#101010',
                  comment='#8fbf87', keyword='#82aaff', string='#e6c07b', number='#d699e5',
                  function='#76d7e4', type='#81c995', operator='#cccccc'),
     'light': dict(bg='#f3f3f3', panel='#e4e4e4', field='#ffffff', fg='#202020', muted='#505050',
                   select='#cce5ff', accent='#005a9e', add='#e1f3e4', remove='#fbe5e8', spacer='#e9e9e9',
                   word_add='#a9dbb3', word_remove='#efb4bf',
+                  search='#fff0a3', search_active='#e8a83d', search_text='#101010',
                   comment='#356b32', keyword='#003e99', string='#734b00', number='#742583',
                   function='#005f6b', type='#245c35', operator='#303030')}
 
@@ -93,5 +95,9 @@ class Theme:
                 widget.tag_raise('word_change', 'changed')
             widget.tag_configure('header', foreground=p['accent'])
             widget.tag_configure('meta', foreground=p['muted'])
+            widget.tag_configure('search_match', background=p['search'])
+            widget.tag_configure('search_current', background=p['search_active'], foreground=p['search_text'])
+            widget.tag_raise('search_match')
+            widget.tag_raise('search_current')
         for child in widget.winfo_children():
             self.paint(child)

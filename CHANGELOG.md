@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.0 — 2026-10-21
+
+- Literal search across both side-by-side saved snapshots, with optional case matching.
+- All-match and active-match highlights, match counter with snapshot side/original line number, and wrapped previous/next navigation.
+- Ctrl+F focuses search; F3/Shift+F3 and Enter/Shift+Enter navigate. Clear or Escape in the search field clears results.
+- Offscreen matches scroll into view; search survives theme, word-highlight, and line-ending toggles. Match limit is explicit.
+
 ## 0.7.0 — 2026-10-21
 
 - Word-level highlighting within paired modified lines, including numbers, punctuation, whitespace, and Unicode identifiers.
