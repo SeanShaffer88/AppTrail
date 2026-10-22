@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-dD/ScW4KiRV545IbycSn/9q60rZWH3XuaK/W6oIZ/Ow='; style-src 'unsafe-inline'; img-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-EZtvMCFx6gzXjUMRGj93W59QLEOeCaZYdPI8e0uslc0='; style-src 'unsafe-inline'; img-src 'none'; base-uri 'none'; form-action 'none'">
 <title>AppTrail · main.py</title><style>
 *{box-sizing:border-box}body{margin:0;background:#0c0c0c;color:#cccccc;font:14px/1.5 'Segoe UI',sans-serif}main{padding:24px}h1{overflow-wrap:anywhere}p{overflow-wrap:anywhere}
 .viewport{overflow:auto;border:1px solid #202020;background:#161616}table{border-collapse:collapse;width:100%;table-layout:fixed;min-width:174ch;font:13px/1.5 Consolas,monospace}.gutter{width:6ch}td{vertical-align:top}.code{white-space:pre;tab-size:4;padding:0 8px}.number{color:#aaaaaa;text-align:right;padding:0 8px;user-select:none}.head{display:flex;justify-content:space-around;background:#202020;padding:8px;font-weight:bold}
@@ -8,10 +8,10 @@
 .review-tools{position:sticky;top:0;z-index:2;background:#202020;padding:12px;border:1px solid #aaaaaa}.review-tools[hidden]{display:none}.tool-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0}input,button{background:#161616;color:#cccccc;border:1px solid #aaaaaa;padding:6px;font:inherit}button{cursor:pointer}button:disabled{opacity:.5;cursor:default}input[type=search]{min-width:160px;flex:1}.code .live-hit{background:#66551c;color:inherit}.code .live-current{background:#f2cf66!important;color:#101010!important}.review-current{outline:2px solid #61afef;outline-offset:-2px}[role=status]{color:#aaaaaa}
 @media print{.viewport{overflow:visible}table{min-width:0}.code{white-space:pre-wrap;overflow-wrap:anywhere}}
 </style></head><body><main><h1>Modified · main.py</h1>
-<p>Side-by-side saved text · AppTrail 0.14.0 · 2026-10-22T02:17:36+00:00</p>
+<p>Side-by-side saved text · AppTrail 0.15.0 · 2026-10-22T02:30:18+00:00</p>
 <p>collapse unchanged: on, ignore whitespace: off, show endings: off, show words: on, match case: off, context lines: 3, theme: dark</p><p><b>Before</b>: utf-8 · 1055 bytes · LF: 44 · final newline<br>SHA-256: ddcea48164660459e7f1ba66c4475e261b297b19331fd0a20548621144783d4e</p><p><b>After</b>: utf-8 · 1057 bytes · LF: 44 · final newline<br>SHA-256: 4e0879f27a9b4bf54dab6abf1aace4e2388eba1240a0927a091fe7113bf42700</p><p>Search: option_10 · 2 matches · active occurrence highlighted.</p>
 <section id="review-controls" class="review-tools" hidden data-initial-match="1" aria-label="Review controls">
-<div class="tool-row"><button type="button" id="previous-change">◀ Previous change</button><button type="button" id="next-change">Next change ▶</button><span id="change-status" role="status" aria-live="polite"></span></div>
+<div class="tool-row"><button type="button" id="previous-change">◀ Previous change</button><button type="button" id="next-change">Next change ▶</button><span id="change-status" role="status" aria-live="polite"></span><button type="button" id="expand-all">Expand all unchanged</button><button type="button" id="collapse-all">Collapse all unchanged</button><span id="section-status" role="status" aria-live="polite"></span></div>
 <div class="tool-row"><label for="find-text">Find:</label><input type="search" id="find-text" value="option_10" aria-label="Find in both snapshots"><label><input type="checkbox" id="find-case">Match case</label><button type="button" id="previous-match">◀ Match</button><button type="button" id="next-match">Match ▶</button><button type="button" id="clear-find">Clear</button></div>
 <div id="find-status" role="status" aria-live="polite"></div><small>F3 / Shift+F3: matches · F7 / Shift+F7: changes · Enter / Shift+Enter in Find: matches</small></section>
 <noscript><p>JavaScript is disabled. Use browser Find and expand sections manually; report contents and colors remain available.</p></noscript>
@@ -30,6 +30,10 @@ Expandable sections contain the full saved text, including code initially hidden
     return {node, base, text: node.textContent};
   });
   const changes = Array.from(document.querySelectorAll('[data-change]'));
+  const sections = Array.from(document.querySelectorAll('.viewport details'));
+  const sectionStatus = document.getElementById('section-status');
+  const expandAll = document.getElementById('expand-all');
+  const collapseAll = document.getElementById('collapse-all');
   let hits = [], hitIndex = -1, changeIndex = -1, timer = null, limited = false;
   const previousMatch = document.getElementById('previous-match');
   const nextMatch = document.getElementById('next-match');
@@ -41,6 +45,14 @@ Expandable sections contain the full saved text, including code initially hidden
     }
     node.scrollIntoView({block: 'center', inline: 'nearest'});
   }
+  function updateSections() {
+    sectionStatus.textContent = sections.length ? `${sections.filter(section => section.open).length} of ${sections.length} sections expanded` : 'No collapsed context sections';
+  }
+  sections.forEach(section => section.addEventListener('toggle', updateSections));
+  expandAll.disabled = collapseAll.disabled = !sections.length;
+  expandAll.addEventListener('click', () => { sections.forEach(section => { section.open = true; }); updateSections(); });
+  collapseAll.addEventListener('click', () => { sections.forEach(section => { section.open = false; }); updateSections(); });
+  updateSections();
   function selectHit(index, scroll = true) {
     if (!hits.length) return;
     if (hitIndex >= 0) hits[hitIndex].marks.forEach(mark => mark.classList.remove('live-current'));

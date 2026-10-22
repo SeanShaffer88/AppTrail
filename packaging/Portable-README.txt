@@ -1,4 +1,4 @@
-AppTrail 0.14.0 — Windows x64 portable edition
+AppTrail 0.15.0 — Windows x64 portable edition
 
 Source and updates: https://github.com/SeanShaffer88/AppTrail
 AppTrail source is MIT licensed. See licenses/AppTrail-MIT.txt.
@@ -79,3 +79,5 @@ Remembered diff options: Collapse unchanged lines, Ignore whitespace-only change
 Side-by-side export: Click Export side-by-side HTML in the diff window to save the current file with syntax/word colors, original line numbers, current view settings, expanded/collapsed context, and search highlights. Open it offline in a browser; native expandable sections reveal saved code in both snapshots. Collapsed code remains included, so review the report before sharing.
 
 Interactive HTML review: New side-by-side exports have offline Find, Match case, previous/next match and change buttons, and counters. Ctrl+F finds; F3/Shift+F3 moves matches; F7/Shift+F7 moves changes. Matches reveal hidden context. The embedded script makes no network requests; without scripts, use browser Find and native expandable sections. Re-export older reports to gain controls.
+
+Report section controls: Expand all unchanged reveals all unchanged code in both snapshots. Collapse all unchanged returns to compact review. The counter tracks open sections, and match navigation reopens hidden matches. Re-export older reports to gain the controls.

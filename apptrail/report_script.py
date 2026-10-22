@@ -13,6 +13,10 @@ REPORT_SCRIPT = r'''(() => {
     return {node, base, text: node.textContent};
   });
   const changes = Array.from(document.querySelectorAll('[data-change]'));
+  const sections = Array.from(document.querySelectorAll('.viewport details'));
+  const sectionStatus = document.getElementById('section-status');
+  const expandAll = document.getElementById('expand-all');
+  const collapseAll = document.getElementById('collapse-all');
   let hits = [], hitIndex = -1, changeIndex = -1, timer = null, limited = false;
   const previousMatch = document.getElementById('previous-match');
   const nextMatch = document.getElementById('next-match');
@@ -24,6 +28,14 @@ REPORT_SCRIPT = r'''(() => {
     }
     node.scrollIntoView({block: 'center', inline: 'nearest'});
   }
+  function updateSections() {
+    sectionStatus.textContent = sections.length ? `${sections.filter(section => section.open).length} of ${sections.length} sections expanded` : 'No collapsed context sections';
+  }
+  sections.forEach(section => section.addEventListener('toggle', updateSections));
+  expandAll.disabled = collapseAll.disabled = !sections.length;
+  expandAll.addEventListener('click', () => { sections.forEach(section => { section.open = true; }); updateSections(); });
+  collapseAll.addEventListener('click', () => { sections.forEach(section => { section.open = false; }); updateSections(); });
+  updateSections();
   function selectHit(index, scroll = true) {
     if (!hits.length) return;
     if (hitIndex >= 0) hits[hitIndex].marks.forEach(mark => mark.classList.remove('live-current'));

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.15.0 — 2026-10-21
+
+- Expand all unchanged / Collapse all unchanged buttons in exported side-by-side reports, with a live section counter.
+- Search/navigation reopen hidden matches after collapse, while source text, colors, and exported settings remain intact. Buttons disable when no sections exist.
+- CI uploads temporary build artifacts only for manual workflow runs, with one-day retention; release downloads remain available.
+
 ## 0.14.0 — 2026-10-21
 
 - Offline search and previous/next match and change controls in exported side-by-side HTML reports, with counts and keyboard shortcuts.

@@ -31,7 +31,7 @@ The text diff screenshot shows AppTrail 0.4.0; history/editor show 0.3.0, and th
 ## Download and run
 
 1. Open the [latest release](https://github.com/SeanShaffer88/AppTrail/releases/latest).
-2. Download **AppTrail-0.14.0-Windows-x64.zip**, extract it, and double-click **AppTrail.exe**. A direct EXE download is also available.
+2. Download **AppTrail-0.15.0-Windows-x64.zip**, extract it, and double-click **AppTrail.exe**. A direct EXE download is also available.
 3. No Python installation, command window, administrator access, or account is required. Keep the license notices with copies you redistribute.
 
 The current executable is an unsigned Windows x64 build, tested on Windows 11 x64. Other Windows versions and native ARM64 execution have not been validated. The bundled runtime extracts into the temporary directory at launch and normally cleans up on exit.
@@ -234,3 +234,9 @@ New side-by-side exports include **Previous change / Next change**, a **Find** b
 Reports retain their exported theme, syntax/word colors, whitespace filter, and context/expanded state. Browser search controls work offline through one fixed embedded script authorized by a CSP hash. Captured source remains escaped text; the report loads no external assets and makes no network requests. If scripts are disabled, use browser Find and native expand controls. Existing reports need to be exported again to gain the new controls. Browser review changes do not modify your AppTrail preferences.
 
 ![Interactive side-by-side HTML review](docs/screenshots/interactive-report.png)
+
+### Expand or collapse an entire exported report
+
+Use **Expand all unchanged** to reveal every unchanged section in both snapshots, or **Collapse all unchanged** to return to a compact review. The section counter shows how many are open. These buttons leave source text, syntax/word colors, search highlights, and change navigation intact. Searching or navigating to a hidden match reopens its section. Controls are disabled when the export contains no collapsed-context sections; export from the app with Collapse unchanged lines enabled to create them. Individual section summaries still work, including without JavaScript. Re-export older reports to get the buttons.
+
+To keep temporary CI storage small, automatic pushes test/build without uploading a duplicate workflow artifact. Manual workflow runs retain their downloadable build artifact for one day. Published release downloads are separate and retained.
