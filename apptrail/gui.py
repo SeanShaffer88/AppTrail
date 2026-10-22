@@ -14,7 +14,7 @@ from .syntax import highlight_lines
 from .theme import Theme
 from .search import find_matches
 from .folding import unchanged_ranges
-from .preferences import read_preferences, write_preference, context_lines, MAX_CONTEXT_LINES
+from .preferences import read_preferences, write_preference, context_lines, diff_options, MAX_CONTEXT_LINES
 
 
 class AppTrail:
@@ -548,7 +548,11 @@ class TextDiffWindow(tk.Toplevel):
         self.minsize(720, 500)
         self.model = build_diff(change)
         self.change = change
-        self.aligned = side_by_side(change)
+        theme = getattr(parent, '_apptrail_theme', None)
+        self.preference_path = theme.path if theme else None
+        preferences = read_preferences(self.preference_path)
+        options = diff_options(preferences)
+        self.aligned = side_by_side(change, options['ignore_whitespace'])
         self.syntax = {}
         for side in ('before', 'after'):
             entry = change.get(side) or {}
@@ -556,10 +560,8 @@ class TextDiffWindow(tk.Toplevel):
         self.change_index = -1
         self.folded = {}
         self.expanded_folds = set()
-        self.collapse_unchanged = tk.BooleanVar(value=False)
-        theme = getattr(parent, '_apptrail_theme', None)
-        self.preference_path = theme.path if theme else None
-        self.context_count = context_lines(read_preferences(self.preference_path))
+        self.collapse_unchanged = tk.BooleanVar(value=options['collapse_unchanged'])
+        self.context_count = context_lines(preferences)
         self.context_value = tk.StringVar(value=str(self.context_count))
         frame = ttk.Frame(self, padding=16)
         frame.pack(fill='both', expand=True)
@@ -567,14 +569,14 @@ class TextDiffWindow(tk.Toplevel):
         ttk.Label(frame, text=self.model['message'], wraplength=950).pack(anchor='w', pady=(6, 10))
         ttk.Label(frame, text='Before: ' + self.model['before_summary'], wraplength=950, style='Subtitle.TLabel').pack(anchor='w')
         ttk.Label(frame, text='After: ' + self.model['after_summary'], wraplength=950, style='Subtitle.TLabel').pack(anchor='w', pady=(0, 8))
-        self.show_endings = tk.BooleanVar(value=False)
-        self.show_words = tk.BooleanVar(value=True)
+        self.show_endings = tk.BooleanVar(value=options['show_endings'])
+        self.show_words = tk.BooleanVar(value=options['show_words'])
         controls = ttk.Frame(frame)
         controls.pack(fill='x', pady=(0, 8))
         ttk.Checkbutton(controls, text='Show line endings (CRLF / LF / CR / no final newline)',
-                        variable=self.show_endings, command=self.refresh_diff).pack(side='left')
+                        variable=self.show_endings, command=lambda: self.save_diff_option('show_endings', self.refresh_diff)).pack(side='left')
         ttk.Checkbutton(controls, text='Highlight changed words', variable=self.show_words,
-                        command=self.refresh_diff).pack(side='right')
+                        command=lambda: self.save_diff_option('show_words', self.refresh_diff)).pack(side='right')
         self.tabs = ttk.Notebook(frame)
         self.tabs.pack(fill='both', expand=True)
         side_frame = ttk.Frame(self.tabs)
@@ -587,15 +589,17 @@ class TextDiffWindow(tk.Toplevel):
         self.next_button.pack(side='left', padx=8)
         self.position = tk.StringVar(value=f'{len(self.aligned["changes"])} change(s)')
         ttk.Label(toolbar, textvariable=self.position).pack(side='left')
-        self.ignore_whitespace = tk.BooleanVar(value=False)
+        self.ignore_whitespace = tk.BooleanVar(value=options['ignore_whitespace'])
         ttk.Checkbutton(toolbar, text='Ignore whitespace-only changes', variable=self.ignore_whitespace,
-                        command=self.realign_diff).pack(side='right')
-        self.whitespace_status = tk.StringVar(value='')
+                        command=lambda: self.save_diff_option('ignore_whitespace', self.realign_diff)).pack(side='right')
+        ignored = sum(row['ignored_whitespace'] for row in self.aligned['rows'])
+        self.whitespace_status = tk.StringVar(value=(f'{ignored} whitespace-only row(s) ignored · saved text stays visible; unified diff stays exact'
+                                                    if options['ignore_whitespace'] else ''))
         ttk.Label(side_frame, textvariable=self.whitespace_status, style='Subtitle.TLabel').pack(anchor='w')
         foldbar = ttk.Frame(side_frame)
         foldbar.pack(fill='x', pady=(0, 6))
         ttk.Checkbutton(foldbar, text='Collapse unchanged lines', variable=self.collapse_unchanged,
-                        command=self.reset_folds).pack(side='left')
+                        command=lambda: self.save_diff_option('collapse_unchanged', self.reset_folds)).pack(side='left')
         ttk.Label(foldbar, text='Context lines:').pack(side='left', padx=(12, 4))
         self.context_spin = ttk.Spinbox(foldbar, from_=0, to=MAX_CONTEXT_LINES, width=4,
                                        textvariable=self.context_value, command=self.set_context_lines)
@@ -608,11 +612,11 @@ class TextDiffWindow(tk.Toplevel):
         searchbar.pack(fill='x', pady=(0, 6))
         ttk.Label(searchbar, text='Find:').pack(side='left')
         self.search_query = tk.StringVar()
-        self.match_case = tk.BooleanVar(value=False)
+        self.match_case = tk.BooleanVar(value=options['match_case'])
         self.search_entry = ttk.Entry(searchbar, textvariable=self.search_query, width=24)
         self.search_entry.pack(side='left', fill='x', expand=True, padx=6)
         ttk.Checkbutton(searchbar, text='Match case', variable=self.match_case,
-                        command=self.schedule_search).pack(side='left', padx=4)
+                        command=lambda: self.save_diff_option('match_case', self.schedule_search)).pack(side='left', padx=4)
         self.previous_match = ttk.Button(searchbar, text='◀ Match', command=lambda: self.jump_match(-1), state='disabled')
         self.previous_match.pack(side='left')
         self.next_match = ttk.Button(searchbar, text='Match ▶', command=lambda: self.jump_match(1), state='disabled')
@@ -698,6 +702,14 @@ class TextDiffWindow(tk.Toplevel):
         self.search_entry.focus_set()
         self.search_entry.selection_range(0, 'end')
         return 'break'
+
+    def save_diff_option(self, key, action):
+        action()
+        if self.preference_path is not None:
+            try:
+                write_preference(self.preference_path, key, bool(getattr(self, key).get()))
+            except OSError:
+                messagebox.showwarning('Diff preference', 'The diff option changed for this window, but the preference could not be saved.', parent=self)
 
     def realign_diff(self):
         active = self.search_matches[self.match_index] if self.match_index >= 0 and self.search_matches else None
@@ -868,7 +880,7 @@ class TextDiffWindow(tk.Toplevel):
 
     def collapse_all_folds(self):
         self.collapse_unchanged.set(True)
-        self.reset_folds()
+        self.save_diff_option('collapse_unchanged', self.reset_folds)
 
     def sync_sides(self, source, first, last):
         if getattr(self, '_syncing', False):

@@ -31,7 +31,7 @@ The text diff screenshot shows AppTrail 0.4.0; history/editor show 0.3.0, and th
 ## Download and run
 
 1. Open the [latest release](https://github.com/SeanShaffer88/AppTrail/releases/latest).
-2. Download **AppTrail-0.11.0-Windows-x64.zip**, extract it, and double-click **AppTrail.exe**. A direct EXE download is also available.
+2. Download **AppTrail-0.12.0-Windows-x64.zip**, extract it, and double-click **AppTrail.exe**. A direct EXE download is also available.
 3. No Python installation, command window, administrator access, or account is required. Keep the license notices with copies you redistribute.
 
 The current executable is an unsigned Windows x64 build, tested on Windows 11 x64. Other Windows versions and native ARM64 execution have not been validated. The bundled runtime extracts into the temporary directory at launch and normally cleans up on exit.
@@ -197,7 +197,7 @@ Search reads saved file text only, excluding gutters, spacer rows, newline marke
 
 ### Ignore whitespace-only changes
 
-Enable **Ignore whitespace-only changes** in the side-by-side toolbar to suppress formatting-only highlights and skip those rows when navigating changes. The option starts off for each diff window. Spaces, tabs, Unicode whitespace, line endings, and inserted/removed blank-only rows are ignored when aligning existing files. Original text and line numbers remain visible and searchable; the status reports how many rows were ignored. Whole-file additions/removals remain changes. Toggle it off to restore exact comparison.
+Enable **Ignore whitespace-only changes** in the side-by-side toolbar to suppress formatting-only highlights and skip those rows when navigating changes. The option restores your saved choice (off on first use). Spaces, tabs, Unicode whitespace, line endings, and inserted/removed blank-only rows are ignored when aligning existing files. Original text and line numbers remain visible and searchable; the status reports how many rows were ignored. Whole-file additions/removals remain changes. Toggle it off to restore exact comparison.
 
 This filter removes whitespace for textual comparison, including whitespace inside strings or indentation-sensitive code; it does not prove semantic equivalence. Mixed lines with non-whitespace edits remain highlighted. Syntax colors, word highlighting, and search continue to work, and the active search occurrence is retained when alignment changes. The unified diff, HTML report, captured evidence, and file-level counts remain exact. No snapshot format changes are needed.
 
@@ -207,10 +207,16 @@ This filter removes whitespace for textual comparison, including whitespace insi
 
 Enable **Collapse unchanged lines** in the side-by-side view to focus on changes. Long unchanged sections become inline **unchanged rows · expand** buttons in both panes, retaining your selected number of context rows next to edits. Click either button to expand that section in both snapshots, use **Expand all** for the full file, or **Collapse again** to restore the compact view. Turning the checkbox off restores all lines. Sections with fewer than two hideable rows stay visible.
 
-The option starts off for each diff window. Original line numbers, syntax/word colors, synchronized scrolling, and saved text are preserved. Search still scans the full saved text and automatically expands the section containing its active match; an active match remains visible when collapsing again. Individual expansions survive line-ending and word-highlight toggles. Changing the whitespace filter recomputes collapsed sections, treating ignored whitespace-only rows as unchanged. Unified diffs, reports, and snapshot evidence stay exact.
+The option restores your saved choice (off on first use). Original line numbers, syntax/word colors, synchronized scrolling, and saved text are preserved. Search still scans the full saved text and automatically expands the section containing its active match; an active match remains visible when collapsing again. Individual expansions survive line-ending and word-highlight toggles. Changing the whitespace filter recomputes collapsed sections, treating ignored whitespace-only rows as unchanged. Unified diffs, reports, and snapshot evidence stay exact.
 
 ![Collapsed unchanged code with inline expansion controls](docs/screenshots/collapsed-diff.jpg)
 
 ### Choose your context size
 
 Set **Context lines** beside the collapse checkbox to a value from **0 to 100** (default **3**). Use the arrows, or type a number and press Enter or leave the field. Collapsed sections update immediately. The choice is saved in the existing history library’s preferences.json and is used by newly opened diff windows and future sessions. Theme changes preserve the context preference, and changing context preserves the theme. Existing open diff windows retain their own value. Invalid input restores the previous value; if saving fails, a warning explains that the value applies only to the current window. Search still reveals hidden matches.
+
+### Remembered diff options
+
+AppTrail remembers **Collapse unchanged lines**, **Ignore whitespace-only changes**, **Show line endings**, **Highlight changed words**, and search **Match case**, alongside your context-line count and theme. Checkbox changes save immediately in the history library’s preferences.json; newly opened diff windows and future sessions restore them. Existing open diff windows keep their current options. **Collapse again** also remembers that collapsing is enabled; expanding individual sections or **Expand all** is temporary and does not change the saved collapse choice. Search queries and individual expanded sections are not saved.
+
+On first use, collapsing, whitespace filtering, line-ending markers, and Match case are off; word highlighting is on. Malformed saved values fall back to these defaults. If saving fails, AppTrail reports that the option applies only to the current window. No snapshot format changes are required.

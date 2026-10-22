@@ -470,6 +470,64 @@ class HistoryGuiTests(unittest.TestCase):
         finally:
             window.destroy()
 
+    def test_all_diff_options_restore_across_sessions_and_preserve_other_preferences(self):
+        from apptrail.gui import TextDiffWindow
+        from apptrail.theme import Theme
+        from apptrail.preferences import read_preferences, write_preference, DIFF_DEFAULTS
+        from tests.test_side_diff import change
+        path = self.history.directory / 'preferences.json'
+        write_preference(path, 'future', 'preserve')
+        write_preference(path, 'context_lines', 5)
+        item = change('  value = 1\r\n' * 30 + 'return 2\r\n', 'value=1\n' * 30 + 'return 4\n')
+        window = TextDiffWindow(self.root, item)
+        try:
+            actions = {'collapse_unchanged': window.reset_folds, 'ignore_whitespace': window.realign_diff,
+                       'show_endings': window.refresh_diff, 'show_words': window.refresh_diff, 'match_case': window.schedule_search}
+            for key, default in DIFF_DEFAULTS.items():
+                getattr(window, key).set(not default)
+                window.save_diff_option(key, actions[key])
+            window.destroy()
+            self.app.theme.toggle()
+            restored = Theme(self.root, path)
+            self.assertEqual(restored.mode.get(), 'light')
+            saved = path.read_bytes()
+            window = TextDiffWindow(self.root, item)
+            self.assertEqual(path.read_bytes(), saved, 'Opening a diff must not overwrite saved options')
+            for key, default in DIFF_DEFAULTS.items():
+                self.assertEqual(getattr(window, key).get(), not default)
+            self.assertTrue(window.folded)
+            self.assertEqual(window.aligned['changes'], [31])
+            self.assertIn('CRLF', window.side_texts[0].get('1.0', 'end'))
+            self.assertFalse(window.side_texts[0].tag_ranges('word_change'))
+            self.assertIn('30 whitespace-only row(s) ignored', window.whitespace_status.get())
+            self.assertEqual(read_preferences(path)['future'], 'preserve')
+            self.assertEqual(read_preferences(path)['context_lines'], 5)
+            actions = {'collapse_unchanged': window.reset_folds, 'ignore_whitespace': window.realign_diff,
+                       'show_endings': window.refresh_diff, 'show_words': window.refresh_diff, 'match_case': window.schedule_search}
+            for key, default in DIFF_DEFAULTS.items():
+                getattr(window, key).set(default)
+                window.save_diff_option(key, actions[key])
+            window.destroy()
+            window = TextDiffWindow(self.root, item)
+            for key, default in DIFF_DEFAULTS.items():
+                self.assertEqual(getattr(window, key).get(), default)
+        finally:
+            window.destroy()
+
+    def test_diff_option_save_failure_is_reported_without_reverting_view(self):
+        from apptrail.gui import TextDiffWindow
+        from tests.test_side_diff import change
+        window = TextDiffWindow(self.root, change('before\n', 'after\n'))
+        try:
+            window.show_endings.set(True)
+            with patch('apptrail.gui.write_preference', side_effect=OSError('read only')), patch('apptrail.gui.messagebox.showwarning') as warning:
+                window.save_diff_option('show_endings', window.refresh_diff)
+            self.assertTrue(window.show_endings.get())
+            self.assertIn('⟦LF⟧', window.side_texts[0].get('1.0', 'end'))
+            warning.assert_called_once()
+        finally:
+            window.destroy()
+
     def test_side_diff_navigation_numbers_and_synchronized_scrolling(self):
         from apptrail.gui import TextDiffWindow
         from tests.test_side_diff import change

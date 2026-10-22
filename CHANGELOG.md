@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.12.0 — 2026-10-21
+
+- Remember collapsing unchanged lines, ignoring whitespace-only changes, showing line endings, word-level highlighting, and search case matching for new diff windows and future sessions.
+- Restore saved options on first render without overwriting preferences. Both enabled and disabled values persist; strict boolean validation retains safe defaults for malformed settings.
+- Updates preserve context size, theme, and unrelated settings. Save failures report a window-only change. Individual expanded sections and search queries remain temporary.
+
 ## 0.11.0 — 2026-10-21
 
 - Context lines setting (0–100, default 3) alongside collapsed diff controls. Applies immediately and is remembered for new diff windows and future sessions.

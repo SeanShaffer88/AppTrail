@@ -4,6 +4,13 @@ from .core import atomic_write
 
 DEFAULT_CONTEXT_LINES = 3
 MAX_CONTEXT_LINES = 100
+DIFF_DEFAULTS = {'collapse_unchanged': False, 'ignore_whitespace': False,
+                 'show_endings': False, 'show_words': True, 'match_case': False}
+
+
+def diff_options(preferences):
+    return {key: preferences[key] if type(preferences.get(key)) is bool else default
+            for key, default in DIFF_DEFAULTS.items()}
 
 
 def read_preferences(path):

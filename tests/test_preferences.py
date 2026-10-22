@@ -2,10 +2,17 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from apptrail.preferences import read_preferences, write_preference, context_lines
+from apptrail.preferences import read_preferences, write_preference, context_lines, diff_options, DIFF_DEFAULTS
 
 
 class PreferenceTests(unittest.TestCase):
+    def test_diff_options_require_real_booleans(self):
+        self.assertEqual(diff_options({}), DIFF_DEFAULTS)
+        for invalid in (0, 1, 'true', 'false', None, [], {}):
+            self.assertEqual(diff_options({key: invalid for key in DIFF_DEFAULTS}), DIFF_DEFAULTS)
+        self.assertEqual(diff_options({key: not value for key, value in DIFF_DEFAULTS.items()}),
+                         {key: not value for key, value in DIFF_DEFAULTS.items()})
+
     def test_defaults_and_validation(self):
         self.assertEqual(context_lines({}), 3)
         for value in (-1, 101, True, '5', None, [], 2.5):
