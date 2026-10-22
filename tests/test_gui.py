@@ -528,6 +528,42 @@ class HistoryGuiTests(unittest.TestCase):
         finally:
             window.destroy()
 
+    def test_export_side_report_uses_live_options_and_expanded_sections(self):
+        from apptrail.gui import TextDiffWindow
+        from tests.test_side_diff import change
+        before = '  keep = 1\r\n' * 30 + 'return 2\r\n'
+        after = 'keep=1\n' * 30 + 'return 4\n'
+        window = TextDiffWindow(self.root, change(before, after))
+        try:
+            window.ignore_whitespace.set(True)
+            window.realign_diff()
+            window.collapse_all_folds()
+            window.expand_all_folds()
+            window.show_endings.set(True)
+            window.show_words.set(False)
+            window.refresh_diff()
+            window.search_query.set('keep')
+            window.update_search()
+            path = self.base / 'side-report.html'
+            with patch('apptrail.gui.filedialog.asksaveasfilename', return_value=str(path)), patch('apptrail.gui.messagebox.showinfo') as info:
+                window.export_side_html()
+            html = path.read_text(encoding='utf-8')
+            self.assertIn('ignore whitespace: on', html)
+            self.assertIn('show words: off', html)
+            self.assertIn('show endings: on', html)
+            self.assertIn('<details open>', html)
+            self.assertIn('Search: keep', html)
+            self.assertIn('syn-', html)
+            info.assert_called_once()
+            with patch('apptrail.gui.filedialog.asksaveasfilename', return_value=''), patch('apptrail.gui.export_side_report') as exporter:
+                window.export_side_html()
+                exporter.assert_not_called()
+            with patch('apptrail.gui.filedialog.asksaveasfilename', return_value=str(path)), patch('apptrail.gui.export_side_report', side_effect=OSError('read only')), patch('apptrail.gui.messagebox.showerror') as error:
+                window.export_side_html()
+                error.assert_called_once()
+        finally:
+            window.destroy()
+
     def test_side_diff_navigation_numbers_and_synchronized_scrolling(self):
         from apptrail.gui import TextDiffWindow
         from tests.test_side_diff import change

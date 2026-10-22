@@ -1,4 +1,4 @@
-AppTrail 0.12.0 — Windows x64 portable edition
+AppTrail 0.13.0 — Windows x64 portable edition
 
 Source and updates: https://github.com/SeanShaffer88/AppTrail
 AppTrail source is MIT licensed. See licenses/AppTrail-MIT.txt.
@@ -75,3 +75,5 @@ Collapse unchanged lines: Enable in Side by side to keep three context rows arou
 Context lines: Choose 0–100 alongside Collapse unchanged lines (default 3). Arrows apply immediately; typed values apply on Enter or leaving the field. The choice is remembered for newly opened diff windows and future sessions in the history library preferences.json.
 
 Remembered diff options: Collapse unchanged lines, Ignore whitespace-only changes, Show line endings, Highlight changed words, and search Match case save when toggled and restore in new diff windows/future sessions. They share preferences.json with context size and theme. Individual expanded sections and search queries stay temporary.
+
+Side-by-side export: Click Export side-by-side HTML in the diff window to save the current file with syntax/word colors, original line numbers, current view settings, expanded/collapsed context, and search highlights. Open it offline in a browser; native expandable sections reveal saved code in both snapshots. Collapsed code remains included, so review the report before sharing.

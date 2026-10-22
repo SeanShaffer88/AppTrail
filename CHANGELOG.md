@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.0 — 2026-10-21
+
+- Export the current file’s side-by-side diff to a self-contained HTML report.
+- Preserve syntax colors, word-level changes, line numbers, theme, line endings, whitespace filtering, context size, expanded/collapsed sections, and current search highlights.
+- Native HTML expandable sections reveal hidden code in both snapshots without scripts or network requests. Escaped captured content and encoding/hash summaries are included.
+
 ## 0.12.0 — 2026-10-21
 
 - Remember collapsing unchanged lines, ignoring whitespace-only changes, showing line endings, word-level highlighting, and search case matching for new diff windows and future sessions.

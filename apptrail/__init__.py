@@ -1,2 +1,2 @@
 """AppTrail: local application folder snapshots and evidence-based comparisons."""
-__version__ = '0.12.0'
+__version__ = '0.13.0'

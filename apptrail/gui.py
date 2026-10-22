@@ -14,6 +14,7 @@ from .syntax import highlight_lines
 from .theme import Theme
 from .search import find_matches
 from .folding import unchanged_ranges
+from .side_report import export_side_report
 from .preferences import read_preferences, write_preference, context_lines, diff_options, MAX_CONTEXT_LINES
 
 
@@ -608,6 +609,7 @@ class TextDiffWindow(tk.Toplevel):
         self.context_spin.bind('<FocusOut>', self.set_context_lines)
         ttk.Button(foldbar, text='Expand all', command=self.expand_all_folds).pack(side='left', padx=8)
         ttk.Button(foldbar, text='Collapse again', command=self.collapse_all_folds).pack(side='left')
+        ttk.Button(foldbar, text='Export side-by-side HTML…', command=self.export_side_html).pack(side='right')
         searchbar = ttk.Frame(side_frame)
         searchbar.pack(fill='x', pady=(0, 6))
         ttk.Label(searchbar, text='Find:').pack(side='left')
@@ -710,6 +712,29 @@ class TextDiffWindow(tk.Toplevel):
                 write_preference(self.preference_path, key, bool(getattr(self, key).get()))
             except OSError:
                 messagebox.showwarning('Diff preference', 'The diff option changed for this window, but the preference could not be saved.', parent=self)
+
+    def export_side_html(self):
+        path = filedialog.asksaveasfilename(parent=self, title='Export side-by-side HTML report',
+                                          defaultextension='.html', filetypes=[('HTML report', '*.html')],
+                                          initialfile='AppTrail-side-by-side.html')
+        if not path:
+            return
+        self.set_context_lines()
+        if self.search_pending is not None:
+            self.update_search(preserve=True)
+        theme = getattr(self.master, '_apptrail_theme', None)
+        settings = {key: bool(getattr(self, key).get()) for key in
+                    ('collapse_unchanged', 'ignore_whitespace', 'show_endings', 'show_words', 'match_case')}
+        settings.update(context_lines=self.context_count, theme=theme.mode.get() if theme else 'dark')
+        active = self.search_matches[self.match_index] if self.match_index >= 0 and self.search_matches else None
+        try:
+            export_side_report(self.change, settings, path,
+                               folded_ranges=[(start, end) for start, (end, _) in self.folded.items()],
+                               query=self.search_query.get(), active_match=active)
+        except (OSError, ValueError) as exc:
+            messagebox.showerror('Cannot export side-by-side report', str(exc), parent=self)
+            return
+        messagebox.showinfo('Report exported', f'Side-by-side report saved to:\n{path}\n\nThe report includes saved source text, including collapsed sections. Review before sharing.', parent=self)
 
     def realign_diff(self):
         active = self.search_matches[self.match_index] if self.match_index >= 0 and self.search_matches else None
