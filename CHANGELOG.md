@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.10.0 — 2026-10-21
+
+- Optional collapse of long unchanged sections in side-by-side diffs, keeping three context rows around changes.
+- Inline expand buttons reveal a section in both panes; Expand all and Collapse again control the full view. Original line numbers and source evidence are preserved.
+- Search reveals hidden matches automatically. Folding works with syntax/word colors, line-ending toggles, and whitespace filtering.
+
 ## 0.9.0 — 2026-10-21
 
 - Optional Ignore whitespace-only changes filter in the side-by-side toolbar, off by default.

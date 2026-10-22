@@ -13,6 +13,7 @@ from .textdiff import build_diff, diff_text, side_by_side, side_line
 from .syntax import highlight_lines
 from .theme import Theme
 from .search import find_matches
+from .folding import unchanged_ranges
 
 
 class AppTrail:
@@ -552,6 +553,9 @@ class TextDiffWindow(tk.Toplevel):
             entry = change.get(side) or {}
             self.syntax[side] = highlight_lines(change['path'], (entry.get('text') or {}).get('content', ''))
         self.change_index = -1
+        self.folded = {}
+        self.expanded_folds = set()
+        self.collapse_unchanged = tk.BooleanVar(value=False)
         frame = ttk.Frame(self, padding=16)
         frame.pack(fill='both', expand=True)
         ttk.Label(frame, text=f'{change["status"]} · {change["path"]}', font=('Segoe UI', 14, 'bold'), wraplength=950).pack(anchor='w')
@@ -583,6 +587,12 @@ class TextDiffWindow(tk.Toplevel):
                         command=self.realign_diff).pack(side='right')
         self.whitespace_status = tk.StringVar(value='')
         ttk.Label(side_frame, textvariable=self.whitespace_status, style='Subtitle.TLabel').pack(anchor='w')
+        foldbar = ttk.Frame(side_frame)
+        foldbar.pack(fill='x', pady=(0, 6))
+        ttk.Checkbutton(foldbar, text='Collapse unchanged lines · 3 context lines', variable=self.collapse_unchanged,
+                        command=self.reset_folds).pack(side='left')
+        ttk.Button(foldbar, text='Expand all', command=self.expand_all_folds).pack(side='left', padx=8)
+        ttk.Button(foldbar, text='Collapse again', command=self.collapse_all_folds).pack(side='left')
         searchbar = ttk.Frame(side_frame)
         searchbar.pack(fill='x', pady=(0, 6))
         ttk.Label(searchbar, text='Find:').pack(side='left')
@@ -681,6 +691,7 @@ class TextDiffWindow(tk.Toplevel):
     def realign_diff(self):
         active = self.search_matches[self.match_index] if self.match_index >= 0 and self.search_matches else None
         self.aligned = side_by_side(self.change, self.ignore_whitespace.get())
+        self.expanded_folds.clear()
         self.change_index = -1
         self.position.set(f'{len(self.aligned["changes"])} change(s)')
         ignored = sum(row['ignored_whitespace'] for row in self.aligned['rows'])
@@ -736,13 +747,15 @@ class TextDiffWindow(tk.Toplevel):
     def match_range(self, match):
         widget = self.side_texts[0 if match['side'] == 'before' else 1]
         content = self.aligned['rows'][match['row'] - 1][match['side']].rstrip('\r\n')
-        start = int(widget.tk.call('string', 'length', content[:match['start']])) + 7
-        end = int(widget.tk.call('string', 'length', content[:match['end']])) + 7
+        offset = 1 if match['row'] in self.folded else 0
+        start = int(widget.tk.call('string', 'length', content[:match['start']])) + 7 + offset
+        end = int(widget.tk.call('string', 'length', content[:match['end']])) + 7 + offset
         return widget, f'{match["row"]}.{start}', f'{match["row"]}.{end}'
 
     def show_match(self, index, reveal=True):
         self.match_index = index
         match = self.search_matches[index]
+        self.reveal_row(match['row'])
         for widget in self.side_texts:
             widget.tag_remove('search_current', '1.0', 'end')
         widget, start, end = self.match_range(match)
@@ -774,6 +787,58 @@ class TextDiffWindow(tk.Toplevel):
         for widget in self.side_texts:
             widget.yview(*args)
 
+    def clear_folds(self):
+        for start in list(self.folded):
+            self.expand_fold(start, remember=False)
+
+    def expand_fold(self, start, remember=True):
+        end, buttons = self.folded.pop(start)
+        for widget, button in zip(self.side_texts, buttons):
+            widget.configure(state='normal')
+            widget.tag_delete(f'fold_{start}')
+            widget.delete(f'{start}.0', f'{start}.1')
+            widget.configure(state='disabled')
+            button.destroy()
+        if remember:
+            self.expanded_folds.add((start, end))
+
+    def reveal_row(self, row):
+        for start, (end, _) in list(self.folded.items()):
+            if start <= row < end:
+                self.expand_fold(start)
+                break
+
+    def apply_folds(self):
+        if not self.collapse_unchanged.get():
+            return
+        for start, end in unchanged_ranges(self.aligned['rows']):
+            if (start, end) in self.expanded_folds:
+                continue
+            buttons = []
+            for widget in self.side_texts:
+                widget.configure(state='normal')
+                button = ttk.Button(widget, text=f'▶ {end - start} unchanged rows · expand',
+                                    command=lambda row=start: self.expand_fold(row))
+                widget.window_create(f'{start}.0', window=button)
+                widget.tag_configure(f'fold_{start}', elide=True)
+                widget.tag_add(f'fold_{start}', f'{start}.1', f'{start}.end')
+                widget.tag_add(f'fold_{start}', f'{start + 1}.0', f'{end}.0')
+                widget.configure(state='disabled')
+                buttons.append(button)
+            self.folded[start] = (end, buttons)
+
+    def expand_all_folds(self):
+        for start in list(self.folded):
+            self.expand_fold(start)
+
+    def reset_folds(self):
+        self.expanded_folds.clear()
+        self.refresh_diff()
+
+    def collapse_all_folds(self):
+        self.collapse_unchanged.set(True)
+        self.reset_folds()
+
     def sync_sides(self, source, first, last):
         if getattr(self, '_syncing', False):
             return
@@ -795,6 +860,7 @@ class TextDiffWindow(tk.Toplevel):
         else:
             self.change_index = (self.change_index + direction) % len(changes)
         row = changes[self.change_index]
+        self.reveal_row(row)
         self.tabs.select(0)
         for widget in self.side_texts:
             widget.tag_remove('current', '1.0', 'end')
@@ -803,6 +869,7 @@ class TextDiffWindow(tk.Toplevel):
         self.position.set(f'Change {self.change_index + 1} of {len(changes)}')
 
     def refresh_diff(self):
+        self.clear_folds()
         for side, widget in zip(('before', 'after'), self.side_texts):
             widget.configure(state='normal')
             widget.delete('1.0', 'end')
@@ -844,6 +911,7 @@ class TextDiffWindow(tk.Toplevel):
                 rendered = diff_text({'lines': [line]}, self.show_endings.get())
                 self.text.insert('end', rendered, (line['kind'],))
         self.text.configure(state='disabled')
+        self.apply_folds()
         self.update_search(preserve=True)
 
 

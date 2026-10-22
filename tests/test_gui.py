@@ -344,6 +344,85 @@ class HistoryGuiTests(unittest.TestCase):
         finally:
             window.destroy()
 
+    def test_collapsing_context_expansion_and_search_reveal(self):
+        from apptrail.gui import TextDiffWindow
+        from tests.test_side_diff import change
+        before = ''.join(f'value_{i} = {i}\n' for i in range(60))
+        after = before.replace('value_30 = 30', 'value_30 = 300')
+        window = TextDiffWindow(self.root, change(before, after))
+        try:
+            self.assertFalse(window.collapse_unchanged.get())
+            original = [widget.get('1.0', 'end') for widget in window.side_texts]
+            window.collapse_all_folds()
+            self.assertEqual(set(window.folded), {1, 35})
+            left, right = window.side_texts
+            self.assertEqual(str(left.tag_cget('fold_1', 'elide')), '1')
+            self.assertEqual(left.get('28.0', '28.end'), '  28 │ value_27 = 27')
+            window.folded[1][1][0].invoke()
+            self.assertNotIn(1, window.folded)
+            self.assertIn((1, 28), window.expanded_folds)
+            window.show_endings.set(True)
+            window.refresh_diff()
+            self.assertNotIn(1, window.folded)
+            window.search_query.set('value_50')
+            window.update_search()
+            self.assertNotIn(35, window.folded)
+            self.assertEqual(left.get(*left.tag_ranges('search_current')), 'value_50')
+            window.clear_search()
+            window.collapse_all_folds()
+            self.assertEqual(set(window.folded), {1, 35})
+            window.jump_change(1)
+            self.assertEqual(str(left.tag_ranges('current')[0]), '31.0')
+            window.expand_all_folds()
+            self.assertFalse(window.folded)
+            window.show_endings.set(False)
+            window.refresh_diff()
+            self.assertEqual([widget.get('1.0', 'end') for widget in window.side_texts], original)
+            window.collapse_unchanged.set(False)
+            window.reset_folds()
+            self.assertFalse(window.folded)
+        finally:
+            window.destroy()
+
+    def test_search_at_first_hidden_row_preserves_unicode_offsets(self):
+        from apptrail.gui import TextDiffWindow
+        from tests.test_side_diff import change
+        before = 'name = "😀"; needle = 1\n' + 'same\n' * 20 + 'return 1\n'
+        window = TextDiffWindow(self.root, change(before, before.replace('return 1', 'return 2')))
+        try:
+            window.collapse_all_folds()
+            self.assertIn(1, window.folded)
+            window.search_query.set('needle')
+            window.update_search()
+            self.assertNotIn(1, window.folded)
+            self.assertEqual(window.side_texts[0].get(*window.side_texts[0].tag_ranges('search_current')), 'needle')
+            window.jump_match(1)
+            self.assertEqual(window.side_texts[1].get(*window.side_texts[1].tag_ranges('search_current')), 'needle')
+            self.app.theme.toggle()
+            window.clear_search()
+            window.collapse_all_folds()
+            self.assertIn(1, window.folded)
+        finally:
+            window.destroy()
+
+    def test_fold_ranges_recomputed_with_whitespace_filter(self):
+        from apptrail.gui import TextDiffWindow
+        from tests.test_side_diff import change
+        before = '  value = 1\n' * 20 + 'return 1\n'
+        after = 'value=1\n' * 20 + 'return 2\n'
+        window = TextDiffWindow(self.root, change(before, after))
+        try:
+            window.collapse_all_folds()
+            self.assertFalse(window.folded)
+            window.ignore_whitespace.set(True)
+            window.realign_diff()
+            self.assertIn(1, window.folded)
+            window.ignore_whitespace.set(False)
+            window.realign_diff()
+            self.assertFalse(window.folded)
+        finally:
+            window.destroy()
+
     def test_side_diff_navigation_numbers_and_synchronized_scrolling(self):
         from apptrail.gui import TextDiffWindow
         from tests.test_side_diff import change

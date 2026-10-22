@@ -1,4 +1,4 @@
-AppTrail 0.9.0 — Windows x64 portable edition
+AppTrail 0.10.0 — Windows x64 portable edition
 
 Source and updates: https://github.com/SeanShaffer88/AppTrail
 AppTrail source is MIT licensed. See licenses/AppTrail-MIT.txt.
@@ -69,3 +69,5 @@ Word diffs: Highlight changed words is enabled in Side by side. Stronger red/gre
 Search: Ctrl+F focuses Find in the side-by-side view. Search both saved snapshots; use Match case if needed. Match buttons, F3/Shift+F3, or Enter/Shift+Enter navigate with wraparound. Clear or Escape in Find removes highlights. The counter shows side and original line. Queries are literal, single-line, non-overlapping; refine if the 10,000-match limit is reached.
 
 Ignore whitespace-only changes: Enable in the Side by side toolbar to suppress formatting-only highlights and skip them in change navigation. Text/line numbers remain visible and searchable. This textual filter also ignores whitespace inside strings or indentation-sensitive code. Unified diffs, reports, evidence and file counts stay exact. Turn it off for exact review.
+
+Collapse unchanged lines: Enable in Side by side to keep three context rows around changes. Click an inline expand button to reveal a section in both panes. Expand all restores full code; Collapse again restores compact view. Search automatically reveals hidden matches. Original line numbers and exact evidence are preserved.
