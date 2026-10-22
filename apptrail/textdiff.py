@@ -194,7 +194,7 @@ def word_changes(before, after, budget=200000):
     return removed, added, cost
 
 
-def side_by_side(change):
+def side_by_side(change, ignore_whitespace=False):
     """Align saved lines, preserving real line numbers and blank spacer rows."""
     if build_diff(change)['state'] != 'available':
         return {'rows': [], 'changes': []}
@@ -202,25 +202,62 @@ def side_by_side(change):
         content = entry['text']['content'] if entry else ''
         return (content[1:] if content.startswith('\ufeff') else content).splitlines(keepends=True)
     before, after = lines(change.get('before')), lines(change.get('after'))
+    ignore_whitespace = ignore_whitespace and change.get('before') is not None and change.get('after') is not None
     rows, changes = [], []
     word_budget = 1000000
-    for kind, a, b, c, d in difflib.SequenceMatcher(None, before, after, autojunk=False).get_opcodes():
-        if kind != 'equal':
-            changes.append(len(rows) + 1)
+    def key(line):
+        return ''.join(line.split()) if ignore_whitespace else line
+    # Blank-only rows stay visible but do not displace real lines during filtering.
+    left_indices = [i for i, line in enumerate(before) if not ignore_whitespace or key(line)]
+    right_indices = [i for i, line in enumerate(after) if not ignore_whitespace or key(line)]
+    alignment = []
+    left_cursor = right_cursor = 0
+    matcher = difflib.SequenceMatcher(None, [key(before[i]) for i in left_indices],
+                                     [key(after[i]) for i in right_indices], autojunk=False)
+    for group, (kind, a, b, c, d) in enumerate(matcher.get_opcodes()):
         for offset in range(max(b - a, d - c)):
-            left, right = a + offset, c + offset
-            row = {'before_number': left + 1 if left < b else None,
-                         'after_number': right + 1 if right < d else None,
-                         'before': before[left] if left < b else None,
-                         'after': after[right] if right < d else None,
-                   'kind': kind, 'before_words': [], 'after_words': [], 'ending_changed': False}
-            if kind == 'replace' and row['before'] is not None and row['after'] is not None:
-                removed, added, cost = word_changes(row['before'], row['after'], min(word_budget, 200000))
-                word_budget -= cost
-                row['before_words'], row['after_words'] = removed, added
-                row['ending_changed'] = (row['before'][len(row['before'].rstrip('\r\n')):] !=
-                                         row['after'][len(row['after'].rstrip('\r\n')):])
-            rows.append(row)
+            left = left_indices[a + offset] if a + offset < b else None
+            right = right_indices[c + offset] if c + offset < d else None
+            left_blanks = list(range(left_cursor, left)) if left is not None else []
+            right_blanks = list(range(right_cursor, right)) if right is not None else []
+            for blank in range(max(len(left_blanks), len(right_blanks))):
+                alignment.append(('equal', left_blanks[blank] if blank < len(left_blanks) else None,
+                                  right_blanks[blank] if blank < len(right_blanks) else None, group))
+            alignment.append((kind, left, right, group))
+            if left is not None:
+                left_cursor = left + 1
+            if right is not None:
+                right_cursor = right + 1
+    for offset in range(max(len(before) - left_cursor, len(after) - right_cursor)):
+        alignment.append(('equal', left_cursor + offset if left_cursor + offset < len(before) else None,
+                          right_cursor + offset if right_cursor + offset < len(after) else None, -1))
+    last_group = None
+    in_change = False
+    for kind, left, right, group in alignment:
+        if group != last_group:
+            in_change = False
+        last_group = group
+        row = {'before_number': left + 1 if left is not None else None,
+               'after_number': right + 1 if right is not None else None,
+               'before': before[left] if left is not None else None,
+               'after': after[right] if right is not None else None,
+               'kind': kind, 'before_words': [], 'after_words': [], 'ending_changed': False,
+               'ignored_whitespace': False}
+        if ignore_whitespace:
+            row['ignored_whitespace'] = (row['before'] != row['after'] and
+                key(row['before'] or '') == key(row['after'] or ''))
+            if row['ignored_whitespace']:
+                row['kind'] = 'equal'
+        if row['kind'] != 'equal' and not in_change:
+            changes.append(len(rows) + 1)
+        in_change = row['kind'] != 'equal'
+        if row['kind'] == 'replace' and row['before'] is not None and row['after'] is not None:
+            removed, added, cost = word_changes(row['before'], row['after'], min(word_budget, 200000))
+            word_budget -= cost
+            row['before_words'], row['after_words'] = removed, added
+            row['ending_changed'] = (row['before'][len(row['before'].rstrip('\r\n')):] !=
+                                     row['after'][len(row['after'].rstrip('\r\n')):])
+        rows.append(row)
     return {'rows': rows, 'changes': changes}
 
 

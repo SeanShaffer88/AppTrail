@@ -545,6 +545,7 @@ class TextDiffWindow(tk.Toplevel):
         self.geometry('1000x720')
         self.minsize(720, 500)
         self.model = build_diff(change)
+        self.change = change
         self.aligned = side_by_side(change)
         self.syntax = {}
         for side in ('before', 'after'):
@@ -577,7 +578,11 @@ class TextDiffWindow(tk.Toplevel):
         self.next_button.pack(side='left', padx=8)
         self.position = tk.StringVar(value=f'{len(self.aligned["changes"])} change(s)')
         ttk.Label(toolbar, textvariable=self.position).pack(side='left')
-        ttk.Label(toolbar, text=self.syntax['after'][0] + ' · syntax colors', style='Subtitle.TLabel').pack(side='right')
+        self.ignore_whitespace = tk.BooleanVar(value=False)
+        ttk.Checkbutton(toolbar, text='Ignore whitespace-only changes', variable=self.ignore_whitespace,
+                        command=self.realign_diff).pack(side='right')
+        self.whitespace_status = tk.StringVar(value='')
+        ttk.Label(side_frame, textvariable=self.whitespace_status, style='Subtitle.TLabel').pack(anchor='w')
         searchbar = ttk.Frame(side_frame)
         searchbar.pack(fill='x', pady=(0, 6))
         ttk.Label(searchbar, text='Find:').pack(side='left')
@@ -672,6 +677,23 @@ class TextDiffWindow(tk.Toplevel):
         self.search_entry.focus_set()
         self.search_entry.selection_range(0, 'end')
         return 'break'
+
+    def realign_diff(self):
+        active = self.search_matches[self.match_index] if self.match_index >= 0 and self.search_matches else None
+        self.aligned = side_by_side(self.change, self.ignore_whitespace.get())
+        self.change_index = -1
+        self.position.set(f'{len(self.aligned["changes"])} change(s)')
+        ignored = sum(row['ignored_whitespace'] for row in self.aligned['rows'])
+        self.whitespace_status.set(f'{ignored} whitespace-only row(s) ignored · saved text stays visible; unified diff stays exact'
+                                   if self.ignore_whitespace.get() else '')
+        for widget in self.side_texts:
+            widget.tag_remove('current', '1.0', 'end')
+        self.refresh_diff()
+        if active:
+            for index, match in enumerate(self.search_matches):
+                if all(match[key] == active[key] for key in ('side', 'line', 'start', 'end')):
+                    self.show_match(index)
+                    break
 
     def cancel_search(self, event=None):
         if event is not None and event.widget is not self:

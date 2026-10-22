@@ -299,6 +299,51 @@ class HistoryGuiTests(unittest.TestCase):
         self.assertIsNone(window.search_pending)
         self.assertNotIn(pending, self.root.tk.call('after', 'info'))
 
+    def test_ignore_whitespace_updates_navigation_keeps_search_and_exact_unified_diff(self):
+        from apptrail.gui import TextDiffWindow
+        from tests.test_side_diff import change
+        window = TextDiffWindow(self.root, change('  keep = 1\n  return 2\n', '\nkeep=1\nreturn 4\n'))
+        try:
+            raw_unified = window.text.get('1.0', 'end')
+            window.search_query.set('keep')
+            window.update_search()
+            window.jump_match(1)
+            self.assertEqual(window.search_matches[window.match_index]['side'], 'after')
+            window.ignore_whitespace.set(True)
+            window.realign_diff()
+            self.assertEqual(window.aligned['changes'], [3])
+            self.assertEqual(window.search_matches[window.match_index]['line'], 2)
+            self.assertEqual(window.search_matches[window.match_index]['side'], 'after')
+            self.assertIn('2 whitespace-only row(s) ignored', window.whitespace_status.get())
+            self.assertEqual(window.text.get('1.0', 'end'), raw_unified)
+            window.jump_change(1)
+            self.assertEqual(str(window.side_texts[0].tag_ranges('current')[0]), '3.0')
+            self.assertEqual(str(window.side_texts[0].tag_ranges('changed')[0]), '3.0')
+            window.ignore_whitespace.set(False)
+            window.realign_diff()
+            self.assertEqual(window.whitespace_status.get(), '')
+            self.assertEqual(window.text.get('1.0', 'end'), raw_unified)
+        finally:
+            window.destroy()
+
+    def test_whitespace_only_diff_disables_change_navigation(self):
+        from apptrail.gui import TextDiffWindow
+        from tests.test_side_diff import change
+        window = TextDiffWindow(self.root, change('  return 1\r\n', 'return 1\n'))
+        try:
+            window.ignore_whitespace.set(True)
+            window.realign_diff()
+            self.assertEqual(window.position.get(), '0 change(s)')
+            self.assertIn('disabled', window.next_button.state())
+            self.assertFalse(window.side_texts[0].tag_ranges('changed'))
+            self.assertFalse(window.side_texts[1].tag_ranges('word_change'))
+            self.assertIn('return 1', window.side_texts[1].get('1.0', 'end'))
+            window.ignore_whitespace.set(False)
+            window.realign_diff()
+            self.assertNotIn('disabled', window.next_button.state())
+        finally:
+            window.destroy()
+
     def test_side_diff_navigation_numbers_and_synchronized_scrolling(self):
         from apptrail.gui import TextDiffWindow
         from tests.test_side_diff import change

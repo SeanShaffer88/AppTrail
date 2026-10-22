@@ -17,6 +17,64 @@ def change(before, after):
 
 
 class SideDiffTests(unittest.TestCase):
+    def test_ignore_whitespace_indentation_spacing_tabs_and_endings(self):
+        item = change('  value = 1\r\n\treturn value\n', 'value=1\n    return  value')
+        self.assertTrue(side_by_side(item)['changes'])
+        model = side_by_side(item, ignore_whitespace=True)
+        self.assertEqual(model['changes'], [])
+        self.assertTrue(all(row['ignored_whitespace'] for row in model['rows']))
+        self.assertEqual(model['rows'][0]['before'], '  value = 1\r\n')
+        self.assertEqual(model['rows'][1]['after_number'], 2)
+
+    def test_ignore_whitespace_keeps_meaningful_edits_and_word_ranges(self):
+        item = change('  a = 1\n  b = 2\n  c = 3\n', 'a=1\nb = 4\nc=3\n')
+        model = side_by_side(item, True)
+        self.assertEqual(model['changes'], [2])
+        self.assertEqual(model['rows'][1]['kind'], 'replace')
+        self.assertTrue(model['rows'][1]['after_words'])
+        self.assertEqual([row['kind'] for row in model['rows']], ['equal', 'replace', 'equal'])
+
+    def test_inserted_blank_lines_preserve_searchable_text_and_original_numbers(self):
+        model = side_by_side(change('  keep\nnext\n', '\nkeep\n   \nNEXT\n'), True)
+        self.assertEqual(model['changes'], [4])
+        self.assertEqual([row['after_number'] for row in model['rows']], [1, 2, 3, 4])
+        self.assertEqual(model['rows'][1]['before_number'], 1)
+        self.assertTrue(model['rows'][0]['ignored_whitespace'])
+        self.assertTrue(model['rows'][2]['ignored_whitespace'])
+
+    def test_whole_file_addition_or_removal_remains_a_change(self):
+        self.assertEqual(side_by_side(change(None, '  \n'), True)['changes'], [1])
+        self.assertEqual(side_by_side(change('\t\n', None), True)['changes'], [1])
+
+    def test_whitespace_filter_is_textual_including_strings_and_unicode(self):
+        self.assertEqual(side_by_side(change('name = "a b"\n', 'name="ab"\n'), True)['changes'], [])
+        self.assertEqual(side_by_side(change('α\u00a0= 1\n', 'α=1\n'), True)['changes'], [])
+
+    def test_toggle_model_does_not_mutate_evidence(self):
+        import copy
+        item = change('  return 1\r\n', 'return 1\n')
+        original = copy.deepcopy(item)
+        raw = side_by_side(item)
+        side_by_side(item, True)
+        self.assertEqual(side_by_side(item), raw)
+        self.assertEqual(item, original)
+
+    def test_alignment_preserves_each_original_line_once_in_both_modes(self):
+        import random
+        rng = random.Random(17)
+        choices = ['\n', '  \n', '\tx = 1\n', 'x=1\n', 'return 2\n', 'return 3\n']
+        for _ in range(100):
+            before = ''.join(rng.choices(choices, k=rng.randrange(1, 12)))
+            after = ''.join(rng.choices(choices, k=rng.randrange(1, 12)))
+            if before == after:
+                continue
+            for ignore in (False, True):
+                rows = side_by_side(change(before, after), ignore)['rows']
+                for side, source in (('before', before), ('after', after)):
+                    self.assertEqual(''.join(row[side] for row in rows if row[side] is not None), source)
+                    self.assertEqual([row[side + '_number'] for row in rows if row[side] is not None],
+                                     list(range(1, len(source.splitlines()) + 1)))
+
     def words(self, before, after):
         left, right, _ = word_changes(before, after)
         return [before[a:b] for a, b in left], [after[a:b] for a, b in right]

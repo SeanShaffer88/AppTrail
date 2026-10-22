@@ -31,7 +31,7 @@ The text diff screenshot shows AppTrail 0.4.0; history/editor show 0.3.0, and th
 ## Download and run
 
 1. Open the [latest release](https://github.com/SeanShaffer88/AppTrail/releases/latest).
-2. Download **AppTrail-0.8.0-Windows-x64.zip**, extract it, and double-click **AppTrail.exe**. A direct EXE download is also available.
+2. Download **AppTrail-0.9.0-Windows-x64.zip**, extract it, and double-click **AppTrail.exe**. A direct EXE download is also available.
 3. No Python installation, command window, administrator access, or account is required. Keep the license notices with copies you redistribute.
 
 The current executable is an unsigned Windows x64 build, tested on Windows 11 x64. Other Windows versions and native ARM64 execution have not been validated. The bundled runtime extracts into the temporary directory at launch and normally cleans up on exit.
@@ -194,3 +194,11 @@ Press **Ctrl+F** in the diff window or use **Find** above the side-by-side panes
 Search reads saved file text only, excluding gutters, spacer rows, newline markers, and metadata. Identical occurrences in both snapshots count separately; navigation follows row order, Before then After. Matches are single-line and non-overlapping. Highlighting survives theme and diff-display changes. At most 10,000 matches are shown; the counter explicitly prompts you to refine a query if more exist. No snapshot format changes are required.
 
 ![Search matches in both snapshots](docs/screenshots/diff-search.jpg)
+
+### Ignore whitespace-only changes
+
+Enable **Ignore whitespace-only changes** in the side-by-side toolbar to suppress formatting-only highlights and skip those rows when navigating changes. The option starts off for each diff window. Spaces, tabs, Unicode whitespace, line endings, and inserted/removed blank-only rows are ignored when aligning existing files. Original text and line numbers remain visible and searchable; the status reports how many rows were ignored. Whole-file additions/removals remain changes. Toggle it off to restore exact comparison.
+
+This filter removes whitespace for textual comparison, including whitespace inside strings or indentation-sensitive code; it does not prove semantic equivalence. Mixed lines with non-whitespace edits remain highlighted. Syntax colors, word highlighting, and search continue to work, and the active search occurrence is retained when alignment changes. The unified diff, HTML report, captured evidence, and file-level counts remain exact. No snapshot format changes are needed.
+
+![Whitespace-only changes ignored while a value change remains highlighted](docs/screenshots/ignore-whitespace.jpg)

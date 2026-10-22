@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0 — 2026-10-21
+
+- Optional Ignore whitespace-only changes filter in the side-by-side toolbar, off by default.
+- Whitespace-normalized alignment suppresses formatting-only highlights/navigation while preserving saved text, original line numbers, and search. Inserted blank lines no longer displace real lines during filtered alignment.
+- Status shows ignored rows. Non-whitespace edits and whole-file additions/removals remain changes. Exact unified diffs, reports, evidence, and file counts are retained.
+
 ## 0.8.0 — 2026-10-21
 
 - Literal search across both side-by-side saved snapshots, with optional case matching.
