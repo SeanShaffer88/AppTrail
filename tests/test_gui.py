@@ -43,6 +43,36 @@ class HistoryGuiTests(unittest.TestCase):
             time.sleep(.01)
         self.assertFalse(self.app.busy, 'Background operation did not finish')
 
+    def test_real_checkpoint_dialog_saves_rules_and_uses_theme(self):
+        from apptrail.gui import CheckpointDialog
+        def fill():
+            dialog = next(child for child in self.root.winfo_children() if isinstance(child, CheckpointDialog))
+            dialog.name.insert(0, 'Before release')
+            dialog.rules.delete('1.0', 'end')
+            dialog.rules.insert('1.0', '.git/\n*.log')
+            self.assertEqual(dialog.rules.cget('background'), self.app.theme.colors['field'])
+            dialog.ok()
+        self.root.after(100, fill)
+        dialog = CheckpointDialog(self.root)
+        self.assertEqual(dialog.result, ('Before release', ['.git/', '*.log']))
+
+    def test_checkpoint_capture_and_one_click_current_comparison(self):
+        self.app.folder.set(str(self.folder))
+        with patch('apptrail.gui.CheckpointDialog') as dialog:
+            dialog.return_value.result = ('Before release', ['*.log'])
+            self.app.save_checkpoint()
+            self.finish_job()
+        identity = self.app.history_tree.selection()[0]
+        self.assertEqual(self.history.get(identity)['label'], 'Before release')
+        self.assertIn('Checkpoint', self.app.selection_info.get())
+        (self.folder / 'settings.txt').write_text('current work')
+        (self.folder / 'ignored.log').write_text('ignored')
+        self.app.compare_checkpoint()
+        self.finish_job()
+        self.assertEqual(self.app.comparison['counts']['Modified'], 1)
+        self.assertEqual(self.app.comparison['counts']['Added'], 0)
+        self.assertEqual(self.app.tabs.select(), str(self.app.comparison_tab))
+
     def test_startup_lists_saved_history_and_filters(self):
         self.assertEqual(len(self.app.history_tree.get_children()), 2)
         self.app.history_filter.set('no match')

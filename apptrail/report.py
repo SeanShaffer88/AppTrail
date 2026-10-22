@@ -57,6 +57,13 @@ def render_html(comparison):
         context = comparison.get('context', {}).get(label, {})
         name = f'<h3>{e(context["label"])}{" · Baseline" if context.get("baseline") else ""}</h3>' if context.get('label') else ''
         notes = f'<p class="capture-note">{e(context["notes"])}</p>' if context.get('notes') else ''
+        checkpoint = comparison[label].get('checkpoint')
+        if checkpoint:
+            git = checkpoint['git']
+            details = (f"{git['commit']} · {git['branch']} · {git['subject']} · {git['author']} · {git['committed_at']} · "
+                       + ('uncommitted changes present' if git['dirty'] else 'clean working tree')
+                       if git['status'] == 'available' else git.get('message', 'Git unavailable'))
+            notes += f'<p>Git: {e(details)}</p><p>Exclusions: {e(", ".join(checkpoint["exclusions"]) or "none")}</p>'
         roots.append(f'<div><h2>{label.title()}</h2>{name}<p>{e(comparison[label]["root"])}</p>'
                      f'<small>{e(comparison[label]["started_at"])} — {e(comparison[label]["completed_at"])}</small>{notes}</div>')
     roots = ''.join(roots)

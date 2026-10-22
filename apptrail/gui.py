@@ -3,10 +3,11 @@ import threading
 import sqlite3
 from pathlib import Path
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, filedialog, messagebox, simpledialog
 import webbrowser
 
 from .core import snapshot_folder, save_snapshot, compare
+from .checkpoints import capture_checkpoint, compare_current, DEFAULT_EXCLUSIONS, exclusion_rules
 from .report import export_report
 from .history import SnapshotHistory
 from .textdiff import build_diff, diff_text, side_by_side, side_line
@@ -65,6 +66,12 @@ class AppTrail:
         self.history_tab = history_frame
         self.comparison_tab = comparison_frame
         self.build_history(history_frame)
+        checkpoints = ttk.Frame(frame)
+        checkpoints.pack(before=self.tabs, fill='x', pady=(6, 0))
+        self.button(checkpoints, 'Save checkpoint…', self.save_checkpoint).pack(side='left')
+        self.button(checkpoints, 'Compare checkpoint to current', self.compare_checkpoint).pack(side='left', padx=8)
+        ttk.Label(checkpoints, text='Select a checkpoint in history to compare its project folder.',
+                  style='Subtitle.TLabel').pack(side='left')
         compare_frame = ttk.LabelFrame(comparison_frame, text='Compare snapshots · choose from history or browse JSON', padding=12)
         compare_frame.pack(fill='x', pady=12)
         compare_frame.columnconfigure(1, weight=1)
@@ -200,12 +207,23 @@ class AppTrail:
         selected = self.history_tree.selection()
         if len(selected) == 1 and selected[0] in self.history_entries:
             entry = self.history_entries[selected[0]]
+            try:
+                checkpoint = self.history.load(selected[0]).get('checkpoint') if not self.show_trash.get() else None
+            except (OSError, ValueError):
+                checkpoint = None
             note = ' '.join(entry['notes'].split()) or 'No notes yet.'
             self.selection_info.set(f'{entry["label"]} · {note[:180]}' + ('…' if len(note) > 180 else ''))
         elif len(selected) > 1:
             self.selection_info.set(f'{len(selected)} snapshots selected')
         else:
             self.selection_info.set('Select a snapshot to see its notes. Double-click to edit.')
+
+        if len(selected) == 1 and selected[0] in self.history_entries and checkpoint:
+            git = checkpoint['git']
+            details = (f"Git {git['commit']} · {git['branch']} · {'uncommitted changes' if git['dirty'] else 'clean'}\n{git['subject'][:120]} · {git['author']} · {git['committed_at']}"
+                       if git['status'] == 'available' else 'Git details unavailable')
+            self.selection_info.set(self.selection_info.get() + '\nCheckpoint · ' + details +
+                                    '\nExclusions: ' + (', '.join(checkpoint['exclusions']) or 'none'))
 
     def selected_history(self, single=False, trash=False):
         if self.busy:
@@ -427,6 +445,36 @@ class AppTrail:
             return ('snapshot', str(self.history.path(identity)), snapshot, identity, output)
         self.status.set('Starting capture…')
         self.run_job(job, cancellable=True)
+
+    def save_checkpoint(self):
+        if self.busy:
+            return
+        folder = self.folder.get()
+        if not folder or not Path(folder).is_dir():
+            messagebox.showerror('Choose a project', 'Choose the project folder first.')
+            return
+        dialog = CheckpointDialog(self.root)
+        if dialog.result is None:
+            return
+        name, rules = dialog.result
+        capture_text = self.include_text.get()
+        def job():
+            identity, snapshot = capture_checkpoint(self.history, folder, name, rules, capture_text,
+                lambda m: self.events.put(('progress', m)), self.stop.is_set)
+            return ('snapshot', str(self.history.path(identity)), snapshot, identity, None)
+        self.status.set('Saving project checkpoint…')
+        self.run_job(job, cancellable=True)
+
+    def compare_checkpoint(self):
+        if self.busy:
+            return
+        selected = self.selected_history(single=True)
+        if not selected:
+            return
+        identity = selected[0]
+        self.status.set('Capturing current project with checkpoint exclusions…')
+        self.run_job(lambda: compare_current(self.history, identity,
+                     lambda m: self.events.put(('progress', m)), self.stop.is_set), cancellable=True)
 
     def compare_snapshots(self):
         if self.busy:
@@ -981,6 +1029,48 @@ class TextDiffWindow(tk.Toplevel):
         self.text.configure(state='disabled')
         self.apply_folds()
         self.update_search(preserve=True)
+
+
+class CheckpointDialog(simpledialog.Dialog):
+    def __init__(self, parent):
+        self.theme = getattr(parent, '_apptrail_theme', None)
+        super().__init__(parent, title='Save project checkpoint')
+
+    def body(self, master):
+        ttk.Label(master, text='Checkpoint name (for example: Before authentication feature)').pack(anchor='w')
+        self.name = ttk.Entry(master, width=65)
+        self.name.pack(fill='x', pady=6)
+        ttk.Label(master, text='Excluded paths / glob patterns · one per line').pack(anchor='w')
+        self.rules = tk.Text(master, width=65, height=8)
+        self.rules.insert('1.0', DEFAULT_EXCLUSIONS)
+        self.rules.pack(fill='both', expand=True, pady=6)
+        ttk.Label(master, text='Names match at any depth; paths with / start at the project root.\n'
+                  'Examples: build/ · *.log · src/generated/ · Git metadata is captured separately.').pack(anchor='w')
+        return self.name
+
+    def buttonbox(self):
+        box = ttk.Frame(self)
+        ttk.Button(box, text='Save checkpoint', command=self.ok).pack(side='left', padx=5, pady=5)
+        ttk.Button(box, text='Cancel', command=self.cancel).pack(side='left', padx=5, pady=5)
+        box.pack()
+        self.bind('<Return>', self.ok)
+        self.bind('<Escape>', self.cancel)
+        if self.theme:
+            self.theme.paint(self)
+
+    def validate(self):
+        name = self.name.get().strip()
+        try:
+            if not name or len(name) > 120 or any(ord(c) < 32 for c in name):
+                raise ValueError('Choose a single-line name of 1–120 characters.')
+            self.pending = name, exclusion_rules(self.rules.get('1.0', 'end-1c'))
+            return True
+        except ValueError as exc:
+            messagebox.showerror('Checkpoint settings', str(exc), parent=self)
+            return False
+
+    def apply(self):
+        self.result = self.pending
 
 
 class SnapshotEditor(tk.Toplevel):

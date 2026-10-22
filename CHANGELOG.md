@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.16.0 — 2026-10-21
+
+- Named project checkpoints with saved exclusion patterns, optional source capture, and local Git commit/branch/author/date/working-tree details.
+- One-click comparison of a selected checkpoint against its current project folder, reusing its capture policy and preserving both observations in history.
+- Git and exclusion evidence in comparison HTML reports; existing history, notes, Trash, and text diffs remain compatible.
+
 ## 0.15.0 — 2026-10-21
 
 - Expand all unchanged / Collapse all unchanged buttons in exported side-by-side reports, with a live section counter.

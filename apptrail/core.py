@@ -45,7 +45,9 @@ def is_link(info):
     return stat.S_ISLNK(info.st_mode) or bool(getattr(info, 'st_file_attributes', 0) & 0x400)
 
 
-def snapshot_folder(root, progress=lambda message: None, cancelled=lambda: False, capture_text=True):
+def snapshot_folder(root, progress=lambda message: None, cancelled=lambda: False, capture_text=True, exclusions=()):
+    from .checkpoints import exclusion_rules, excluded
+    exclusions = exclusion_rules(exclusions)
     root = Path(root).resolve(strict=True)
     if not root.is_dir():
         raise ValueError('Choose an application folder.')
@@ -71,6 +73,8 @@ def snapshot_folder(root, progress=lambda message: None, cancelled=lambda: False
                 raise InterruptedError('Snapshot cancelled. No partial snapshot was saved.')
             path = Path(child.path)
             relative = path.relative_to(root).as_posix()
+            if excluded(relative, exclusions):
+                continue
             try:
                 # Windows DirEntry.stat can omit file identity (st_ino = 0).
                 # Use the same stat API for both sides of the stability check.
@@ -151,6 +155,24 @@ def load_snapshot(path):
             raise ValueError(f'Invalid snapshot field: {field}')
     if not isinstance(data.get('files'), list) or not isinstance(data.get('warnings'), list):
         raise ValueError('Invalid snapshot file or warning list.')
+    checkpoint = data.get('checkpoint')
+    if checkpoint is not None:
+        from .checkpoints import exclusion_rules
+        if (not isinstance(checkpoint, dict) or not isinstance(checkpoint.get('name'), str)
+                or not checkpoint['name'].strip() or len(checkpoint['name']) > 120
+                or any(ord(c) < 32 for c in checkpoint['name'])
+                or not isinstance(checkpoint.get('exclusions'), list)
+                or not isinstance(checkpoint.get('git'), dict)):
+            raise ValueError('Invalid checkpoint metadata.')
+        exclusion_rules(checkpoint['exclusions'])
+        git = checkpoint['git']
+        if git.get('status') not in ('available', 'unavailable'):
+            raise ValueError('Invalid checkpoint Git status.')
+        if git['status'] == 'available':
+            if any(not isinstance(git.get(k), str) for k in ('repository', 'commit', 'branch', 'subject', 'author', 'committed_at')) or type(git.get('dirty')) is not bool:
+                raise ValueError('Invalid checkpoint Git details.')
+        elif not isinstance(git.get('message'), str):
+            raise ValueError('Invalid checkpoint Git message.')
     seen = set()
     total_text = 0
     for entry in data['files']:

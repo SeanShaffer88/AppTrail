@@ -31,7 +31,7 @@ The text diff screenshot shows AppTrail 0.4.0; history/editor show 0.3.0, and th
 ## Download and run
 
 1. Open the [latest release](https://github.com/SeanShaffer88/AppTrail/releases/latest).
-2. Download **AppTrail-0.15.0-Windows-x64.zip**, extract it, and double-click **AppTrail.exe**. A direct EXE download is also available.
+2. Download **AppTrail-0.16.0-Windows-x64.zip**, extract it, and double-click **AppTrail.exe**. A direct EXE download is also available.
 3. No Python installation, command window, administrator access, or account is required. Keep the license notices with copies you redistribute.
 
 The current executable is an unsigned Windows x64 build, tested on Windows 11 x64. Other Windows versions and native ARM64 execution have not been validated. The bundled runtime extracts into the temporary directory at launch and normally cleans up on exit.
@@ -42,6 +42,18 @@ The current executable is an unsigned Windows x64 build, tested on Windows 11 x6
 2. After making changes, capture the folder again. Both snapshots appear in **Snapshot history**.
 3. Select two rows using Ctrl-click or Shift-click, then click **Compare selected (2)**. The older capture becomes **Before** and the newer becomes **After**. Use **Use as Before** / **Use as After** to set the order manually, then compare on the Comparison tab.
 4. Double-click a file to inspect its evidence, or click **Export HTML report** to save a standalone report.
+
+### Project checkpoints
+
+Choose your project folder, then click **Save checkpoint…**. Give it a name such as “Before authentication” or “Release 1.0 baseline” and edit the exclusion patterns. The checkpoint appears in history and becomes the marked baseline for that folder; older checkpoints stay available.
+
+Select a checkpoint row and click **Compare checkpoint to current**. AppTrail captures that checkpoint’s original folder using its saved exclusions and text-capture setting, saves the current observation in history, and opens the comparison. No JSON selection or second capture step is needed. Existing text diffs and HTML exports work with the result. Missing or moved project folders produce an error; AppTrail never substitutes another folder.
+
+Exclusions apply to hashing, metadata, and text capture. Enter one glob per line. Defaults skip `.git/`, `__pycache__/`, `.venv/`, and `node_modules/`. A name such as `build/` matches at any depth; `*.log` matches file or directory names at any depth. Patterns containing `/`, such as `src/generated/`, match from the project root. Matching is case-insensitive; `*` in a path pattern can span `/`. Matching directories are pruned. Negation and absolute/parent paths are unsupported. These are explicit AppTrail patterns, not `.gitignore` rules. Excluded paths do not appear as capture warnings or changes. Rules are saved with each checkpoint and reused for comparisons, including after restarting AppTrail.
+
+With Git installed, checkpoint details show the full commit ID, branch (`HEAD` when detached), commit subject, author, commit date, and whether the repository has uncommitted or untracked changes. Git inspection is local and read-only; it does not fetch, checkout, or modify commits. Git status describes the whole repository, including files excluded from AppTrail. Without Git, outside a repository, or before the first commit, checkpoints still work and identify Git details as unavailable. The comparison HTML report includes Git evidence and exclusion rules for both observations.
+
+A checkpoint is a sequential observation, not a backup or a Git commit. Git metadata is read after the files are captured; keep the project idle for consistent evidence. Renaming a checkpoint through history changes its display name without rewriting the original capture name or exclusion policy. Notes, Trash, and restore work as before. Project paths and source contents remain local unless you share an exported report or snapshot.
 
 ### See source and configuration changes
 

@@ -1,4 +1,4 @@
-AppTrail 0.15.0 — Windows x64 portable edition
+AppTrail 0.16.0 — Windows x64 portable edition
 
 Source and updates: https://github.com/SeanShaffer88/AppTrail
 AppTrail source is MIT licensed. See licenses/AppTrail-MIT.txt.
@@ -81,3 +81,12 @@ Side-by-side export: Click Export side-by-side HTML in the diff window to save t
 Interactive HTML review: New side-by-side exports have offline Find, Match case, previous/next match and change buttons, and counters. Ctrl+F finds; F3/Shift+F3 moves matches; F7/Shift+F7 moves changes. Matches reveal hidden context. The embedded script makes no network requests; without scripts, use browser Find and native expandable sections. Re-export older reports to gain controls.
 
 Report section controls: Expand all unchanged reveals all unchanged code in both snapshots. Collapse all unchanged returns to compact review. The counter tracks open sections, and match navigation reopens hidden matches. Re-export older reports to gain the controls.
+
+Project checkpoints:
+- Choose a project folder and click Save checkpoint. Enter a name and exclusions.
+- Select the saved checkpoint and click Compare checkpoint to current.
+- Saved patterns and the source-text setting are reused automatically.
+- Git commit, branch, author, date, and dirty status are recorded if Git is installed.
+- Default exclusions: .git/, __pycache__/, .venv/, node_modules/.
+- One glob per line; names match at any depth, paths with / match from the root.
+- Checkpoints are observations, not backups or commits. Keep projects idle during capture.
