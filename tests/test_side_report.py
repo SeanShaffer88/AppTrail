@@ -13,7 +13,7 @@ class ReportParser(HTMLParser):
 
     def handle_starttag(self, tag, attrs):
         self.tags.append((tag, dict(attrs)))
-        if tag not in ('meta', 'col', 'br'):
+        if tag not in ('meta', 'col', 'br', 'input'):
             self.stack.append(tag)
 
     def handle_endtag(self, tag):
@@ -39,7 +39,7 @@ class SideReportTests(unittest.TestCase):
         self.assertIn('⟦LF⟧', html)
         self.assertIn('theme: light', html)
         self.assertIn('#ffffff', html)
-        self.assertNotIn('<script', html)
+        self.assertEqual(sum(tag == 'script' for tag, _ in parsed.tags), 1)
         self.assertIn("default-src 'none'", html)
 
     def test_expanded_sections_and_context_are_preserved(self):
@@ -72,7 +72,8 @@ class SideReportTests(unittest.TestCase):
         parsed = ReportParser(html)
         self.assertFalse(parsed.errors)
         self.assertFalse(parsed.stack)
-        self.assertFalse(any(tag in ('script', 'img', 'iframe') for tag, _ in parsed.tags))
+        self.assertEqual(sum(tag == 'script' for tag, _ in parsed.tags), 1)
+        self.assertFalse(any(tag in ('img', 'iframe') for tag, _ in parsed.tags))
         self.assertIn(payload, ''.join(parsed.text))
 
     def test_overlapping_spans_and_unicode_reconstruct_exact_text(self):
@@ -88,3 +89,15 @@ class SideReportTests(unittest.TestCase):
         item['before'].pop('text')
         item['before']['text_status'] = 'legacy'
         self.assertIn('older snapshot', render_side_html(item, {}))
+
+    def test_only_fixed_script_is_authorized_and_change_anchors_follow_filter(self):
+        import base64
+        import hashlib
+        from apptrail.report_script import REPORT_SCRIPT
+        html = render_side_html(change('  keep = 1\nreturn 2\n', 'keep=1\nreturn 4\n'), {'ignore_whitespace': True})
+        digest = base64.b64encode(hashlib.sha256(REPORT_SCRIPT.encode()).digest()).decode()
+        self.assertIn(f"script-src 'sha256-{digest}'", html)
+        self.assertEqual(html.split('<script>')[1].split('</script>')[0], REPORT_SCRIPT)
+        parsed = ReportParser(html)
+        self.assertEqual([attrs['data-change'] for _, attrs in parsed.tags if 'data-change' in attrs], ['2'])
+        self.assertEqual(len([1 for _, attrs in parsed.tags if attrs.get('class') == 'saved-text']), 4)

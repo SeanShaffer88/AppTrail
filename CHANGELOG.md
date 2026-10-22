@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.14.0 — 2026-10-21
+
+- Offline search and previous/next match and change controls in exported side-by-side HTML reports, with counts and keyboard shortcuts.
+- Literal search preserves syntax/word markup, reveals collapsed matches, supports case matching, and wraps through both snapshots.
+- One fixed embedded script is authorized with a CSP hash; captured text stays escaped. Reports remain readable without JavaScript.
+- Real Edge browser regression checks cover navigation, Unicode/token-boundary queries, whitespace/marker exclusions, match limits, and offline behavior.
+
 ## 0.13.0 — 2026-10-21
 
 - Export the current file’s side-by-side diff to a self-contained HTML report.

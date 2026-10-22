@@ -25,6 +25,14 @@ jobs:
           architecture: x64
       - run: python -m pip install -r requirements.txt
       - run: python -m unittest discover -s tests -v
+      - if: matrix.python == '3.15'
+        run: npm install --prefix work/browser-tools --no-save --ignore-scripts playwright@1.62.1
+      - if: matrix.python == '3.15'
+        run: python tests/make_browser_fixture.py work/browser-report.html
+      - if: matrix.python == '3.15'
+        run: node tests/report_browser.cjs work/browser-report.html
+        env:
+          APPTRAIL_PLAYWRIGHT: ${{ github.workspace }}/work/browser-tools/node_modules/playwright
 
   package:
     needs: test

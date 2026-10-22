@@ -31,7 +31,7 @@ The text diff screenshot shows AppTrail 0.4.0; history/editor show 0.3.0, and th
 ## Download and run
 
 1. Open the [latest release](https://github.com/SeanShaffer88/AppTrail/releases/latest).
-2. Download **AppTrail-0.13.0-Windows-x64.zip**, extract it, and double-click **AppTrail.exe**. A direct EXE download is also available.
+2. Download **AppTrail-0.14.0-Windows-x64.zip**, extract it, and double-click **AppTrail.exe**. A direct EXE download is also available.
 3. No Python installation, command window, administrator access, or account is required. Keep the license notices with copies you redistribute.
 
 The current executable is an unsigned Windows x64 build, tested on Windows 11 x64. Other Windows versions and native ARM64 execution have not been validated. The bundled runtime extracts into the temporary directory at launch and normally cleans up on exit.
@@ -225,4 +225,12 @@ On first use, collapsing, whitespace filtering, line-ending markers, and Match c
 
 Click **Export side-by-side HTML…** next to the collapse controls to save a standalone report for the current file. It preserves syntax colors, word-level change highlights, original line numbers, current dark/light theme, line-ending markers, whitespace filtering, context size, and which unchanged sections are currently collapsed or expanded. Your current literal search and active match are highlighted too. The export uses the current window’s options, including unsaved session-only choices.
 
-Open the HTML in a browser. Native expandable sections reveal hidden code in both snapshots together; no JavaScript, network access, external styles, or installed dependencies are needed. Horizontal scrolling keeps both columns aligned. The report includes the file’s saved contents, including initially collapsed code, and hashes/encoding summaries. Review it before sharing. The existing application-wide HTML report remains available from Comparison. [Example side-by-side report](examples/Side-by-side-report.html).
+Open the HTML in a browser. Native expandable sections reveal hidden code in both snapshots together. An embedded script provides review controls; no network access, external styles, or installed dependencies are needed. Horizontal scrolling keeps both columns aligned. The report includes the file’s saved contents, including initially collapsed code, and hashes/encoding summaries. Review it before sharing. The existing application-wide HTML report remains available from Comparison. [Example side-by-side report](examples/Side-by-side-report.html).
+
+### Review an exported report in your browser
+
+New side-by-side exports include **Previous change / Next change**, a **Find** box, optional **Match case**, match navigation, and a match/change counter. Navigation wraps at either end and automatically expands hidden context when needed. Use **Ctrl+F** for report search, **F3 / Shift+F3** for matches, **F7 / Shift+F7** for changes, or **Enter / Shift+Enter** in Find. **Clear** or **Escape** in Find removes search highlights. Search is literal, single-line, and non-overlapping; it scans both snapshots’ source text, excluding line numbers and line-ending markers. The 10,000-match limit is reported explicitly.
+
+Reports retain their exported theme, syntax/word colors, whitespace filter, and context/expanded state. Browser search controls work offline through one fixed embedded script authorized by a CSP hash. Captured source remains escaped text; the report loads no external assets and makes no network requests. If scripts are disabled, use browser Find and native expand controls. Existing reports need to be exported again to gain the new controls. Browser review changes do not modify your AppTrail preferences.
+
+![Interactive side-by-side HTML review](docs/screenshots/interactive-report.png)

@@ -23,3 +23,7 @@ Include your Windows version, AppTrail version, reproduction steps, expected beh
 Explain the problem and resulting behavior. Add tests for substantive scanner, parser, or comparison changes. Run the test suite and describe any manual desktop checks. Keep runtime dependencies minimal and preserve the distinction between observed differences and a proven failure cause.
 
 Contributions are provided under the repository's MIT license.
+
+## Exported report browser tests
+
+With Node.js 20+, Microsoft Edge, and Playwright 1.62.1 available, generate the synthetic fixtures and run `node tests/report_browser.cjs work/browser-report.html`. Generate fixtures first with `python tests/make_browser_fixture.py work/browser-report.html`. Set `APPTRAIL_PLAYWRIGHT` to an absolute Playwright module path if it is not installed on the normal Node module path. CI installs the pinned test-only package into work/browser-tools and uses the runner’s existing Edge browser. This adds no application runtime dependency. The checks verify the actual embedded CSP-authorized script, including offline behavior and the script-disabled fallback.
