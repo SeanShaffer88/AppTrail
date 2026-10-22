@@ -9,6 +9,7 @@ import webbrowser
 from .core import snapshot_folder, save_snapshot, compare
 from .report import export_report
 from .history import SnapshotHistory
+from .textdiff import build_diff, diff_text
 
 
 class AppTrail:
@@ -43,6 +44,9 @@ class AppTrail:
         self.button(capture, 'Choose folder…', self.choose_folder).pack(side='left', padx=4)
         self.button(capture, 'Capture to history', self.capture).pack(side='left', padx=4)
         self.button(capture, 'Save JSON…', lambda: self.capture(save_as=True)).pack(side='left', padx=4)
+        self.include_text = tk.BooleanVar(value=True)
+        ttk.Checkbutton(frame, text='Capture source/config text for diffs · snapshots and reports may contain private code or secrets',
+                        variable=self.include_text).pack(anchor='w', pady=(6, 0))
         self.tabs = ttk.Notebook(frame)
         self.tabs.pack(fill='both', expand=True, pady=(12, 0))
         history_frame = ttk.Frame(self.tabs, padding=12)
@@ -65,6 +69,7 @@ class AppTrail:
         actions.pack(fill='x', pady=(0, 12))
         self.button(actions, 'Compare snapshots', self.compare_snapshots).pack(side='left')
         self.button(actions, 'Export HTML report…', self.export).pack(side='left', padx=8)
+        self.button(actions, 'View text diff…', self.details).pack(side='left')
         self.show_unchanged = tk.BooleanVar(value=False)
         ttk.Checkbutton(actions, text='Show unchanged', variable=self.show_unchanged, command=self.refresh).pack(side='right')
         self.summary = tk.StringVar(value='Save two snapshots to see added, removed, and changed files.')
@@ -84,7 +89,7 @@ class AppTrail:
         table.rowconfigure(0, weight=1)
         table.columnconfigure(0, weight=1)
         self.tree.bind('<Double-1>', self.details)
-        ttk.Label(comparison_frame, text='Double-click a file for hashes and metadata. Warnings and full evidence are included in the report.', style='Subtitle.TLabel').pack(anchor='w', pady=8)
+        ttk.Label(comparison_frame, text='Double-click a file for its saved text diff, hashes, and metadata. Older snapshots may not contain text.', style='Subtitle.TLabel').pack(anchor='w', pady=8)
         bottom = ttk.Frame(frame)
         bottom.pack(before=self.tabs, side='bottom', fill='x')
         self.status = tk.StringVar(value='Ready · Files stay on this computer')
@@ -383,6 +388,7 @@ class AppTrail:
             messagebox.showerror('Choose an application folder', 'This folder contains AppTrail history. Choose a narrower application folder to avoid capturing the history itself.')
             return
         output = None
+        capture_text = self.include_text.get()
         if save_as:
             output = filedialog.asksaveasfilename(title='Save snapshot outside the application folder',
                         defaultextension='.json', initialfile='application.apptrail.json', filetypes=[('AppTrail snapshot', '*.json')])
@@ -393,7 +399,7 @@ class AppTrail:
                 messagebox.showerror('Choose another location', 'Save exported JSON outside the application folder and the managed history directory.')
                 return
         def job():
-            snapshot = snapshot_folder(folder, lambda m: self.events.put(('progress', m)), self.stop.is_set)
+            snapshot = snapshot_folder(folder, lambda m: self.events.put(('progress', m)), self.stop.is_set, capture_text=capture_text)
             if self.stop.is_set():
                 raise InterruptedError('Snapshot cancelled.')
             if output:
@@ -492,15 +498,7 @@ class AppTrail:
         if not selection or not self.comparison:
             return
         change = self.comparison['changes'][int(selection[0])]
-        import json
-        window = tk.Toplevel(self.root)
-        window.title(change['path'])
-        window.geometry('820x600')
-        from tkinter.scrolledtext import ScrolledText
-        text = ScrolledText(window, wrap='word', font=('Consolas', 10), padx=16, pady=16)
-        text.pack(fill='both', expand=True)
-        text.insert('1.0', json.dumps(change, indent=2, ensure_ascii=False))
-        text.configure(state='disabled')
+        return TextDiffWindow(self.root, change)
 
     def export(self):
         if not self.comparison:
@@ -527,6 +525,70 @@ class AppTrail:
             self.stop.set()
         self.root.after_cancel(self.poll_id)
         self.root.destroy()
+
+
+class TextDiffWindow(tk.Toplevel):
+    def __init__(self, parent, change):
+        super().__init__(parent)
+        self.title(f'Text diff · {change["path"]}')
+        self.geometry('1000x720')
+        self.minsize(720, 500)
+        self.model = build_diff(change)
+        frame = ttk.Frame(self, padding=16)
+        frame.pack(fill='both', expand=True)
+        ttk.Label(frame, text=f'{change["status"]} · {change["path"]}', font=('Segoe UI', 14, 'bold'), wraplength=950).pack(anchor='w')
+        ttk.Label(frame, text=self.model['message'], wraplength=950).pack(anchor='w', pady=(6, 10))
+        ttk.Label(frame, text='Before: ' + self.model['before_summary'], wraplength=950, style='Subtitle.TLabel').pack(anchor='w')
+        ttk.Label(frame, text='After: ' + self.model['after_summary'], wraplength=950, style='Subtitle.TLabel').pack(anchor='w', pady=(0, 8))
+        self.show_endings = tk.BooleanVar(value=False)
+        ttk.Checkbutton(frame, text='Show line endings (CRLF / LF / CR / no final newline)',
+                        variable=self.show_endings, command=self.refresh_diff).pack(anchor='w', pady=(0, 8))
+        self.tabs = ttk.Notebook(frame)
+        self.tabs.pack(fill='both', expand=True)
+        diff_frame = ttk.Frame(self.tabs)
+        metadata_frame = ttk.Frame(self.tabs)
+        self.tabs.add(diff_frame, text='Text diff')
+        self.tabs.add(metadata_frame, text='Captured metadata')
+        self.text = tk.Text(diff_frame, wrap='none', height=14, font=('Consolas', 10), padx=12, pady=12, background='white', foreground='#17263b')
+        vertical = ttk.Scrollbar(diff_frame, orient='vertical', command=self.text.yview)
+        horizontal = ttk.Scrollbar(diff_frame, orient='horizontal', command=self.text.xview)
+        self.text.configure(yscrollcommand=vertical.set, xscrollcommand=horizontal.set)
+        self.text.grid(row=0, column=0, sticky='nsew')
+        vertical.grid(row=0, column=1, sticky='ns')
+        horizontal.grid(row=1, column=0, sticky='ew')
+        diff_frame.rowconfigure(0, weight=1)
+        diff_frame.columnconfigure(0, weight=1)
+        for kind, options in {'add': {'background': '#e6ffed', 'foreground': '#14532d'},
+                              'remove': {'background': '#ffeef0', 'foreground': '#8b1a2b'},
+                              'header': {'foreground': '#245d9e'}, 'hunk': {'background': '#eaf0fa', 'foreground': '#245d9e'},
+                              'meta': {'foreground': '#785200'}}.items():
+            self.text.tag_configure(kind, **options)
+        from tkinter.scrolledtext import ScrolledText
+        import json
+        metadata = dict(change)
+        for side in ('before', 'after'):
+            if change.get(side) is not None:
+                metadata[side] = dict(change[side])
+                if metadata[side].get('text'):
+                    metadata[side]['text'] = {'encoding': metadata[side]['text']['encoding'], 'content': '(saved content shown in Text diff tab)'}
+        details = ScrolledText(metadata_frame, wrap='word', font=('Consolas', 10), padx=12, pady=12)
+        details.pack(fill='both', expand=True)
+        details.insert('1.0', json.dumps(metadata, indent=2, ensure_ascii=False))
+        details.configure(state='disabled')
+        ttk.Label(frame, text='Saved evidence only · green = added, red = removed · line numbers are in @@ hunk headers',
+                  style='Subtitle.TLabel', wraplength=950).pack(before=self.tabs, side='bottom', anchor='w', pady=(8, 0))
+        self.refresh_diff()
+
+    def refresh_diff(self):
+        self.text.configure(state='normal')
+        self.text.delete('1.0', 'end')
+        if not self.model['lines']:
+            self.text.insert('1.0', self.model['message'])
+        else:
+            for line in self.model['lines']:
+                rendered = diff_text({'lines': [line]}, self.show_endings.get())
+                self.text.insert('end', rendered, (line['kind'],))
+        self.text.configure(state='disabled')
 
 
 class SnapshotEditor(tk.Toplevel):

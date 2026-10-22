@@ -6,6 +6,10 @@
 
 ## See it in action
 
+Inspect saved source/config changes with colored added and removed lines, encoding details, and optional line-ending markers.
+
+![AppTrail text diff showing exact saved Python source changes with red removed lines and green added lines](docs/screenshots/text-diff.jpg)
+
 Browse named snapshots, inspect notes, and compare builds against a known-good baseline without selecting JSON files each time.
 
 ![AppTrail snapshot history showing saved application captures with dates, folders, file counts, and comparison controls](docs/screenshots/history.jpg)
@@ -22,12 +26,12 @@ Double-click a file to inspect its before-and-after hashes, sizes, timestamps, a
 
 ![AppTrail file evidence window showing different SHA-256 hashes and sizes before and after a settings file changed](docs/screenshots/file-evidence.jpg)
 
-The history and editor screenshots show AppTrail 0.3.0; the comparison and evidence screenshots show 0.1.0. All are unedited Windows captures using demo snapshots.
+The text diff screenshot shows AppTrail 0.4.0; history/editor show 0.3.0, and the older comparison/evidence views show 0.1.0. All are unedited Windows captures using demo snapshots.
 
 ## Download and run
 
 1. Open the [latest release](https://github.com/SeanShaffer88/AppTrail/releases/latest).
-2. Download **AppTrail-0.3.0-Windows-x64.zip**, extract it, and double-click **AppTrail.exe**. A direct EXE download is also available.
+2. Download **AppTrail-0.4.0-Windows-x64.zip**, extract it, and double-click **AppTrail.exe**. A direct EXE download is also available.
 3. No Python installation, command window, administrator access, or account is required. Keep the license notices with copies you redistribute.
 
 The current executable is an unsigned Windows x64 build, tested on Windows 11 x64. Other Windows versions and native ARM64 execution have not been validated. The bundled runtime extracts into the temporary directory at launch and normally cleans up on exit.
@@ -38,6 +42,20 @@ The current executable is an unsigned Windows x64 build, tested on Windows 11 x6
 2. After making changes, capture the folder again. Both snapshots appear in **Snapshot history**.
 3. Select two rows using Ctrl-click or Shift-click, then click **Compare selected (2)**. The older capture becomes **Before** and the newer becomes **After**. Use **Use as Before** / **Use as After** to set the order manually, then compare on the Comparison tab.
 4. Double-click a file to inspect its evidence, or click **Export HTML report** to save a standalone report.
+
+### See source and configuration changes
+
+Leave **Capture source/config text for diffs** enabled when taking two new snapshots. On the Comparison tab, select a changed file and click **View text diff…**, or double-click its row. The Text diff tab shows a color-coded unified diff with hunk line numbers; Captured metadata retains the file evidence. Use **Show line endings** to distinguish CRLF, LF, CR, and a missing final newline. Encoding and BOM differences are summarized above the diff.
+
+Diffs use saved contents, never the current files on disk. Added and removed text files are supported too. HTML reports include escaped saved-text diffs, subject to a 2 MiB included-diff budget; omitted output is explicitly identified and remains available in the desktop view.
+
+New v2 snapshots save eligible source/config text by default, limited to **256 KiB and 3,000 lines per file**, with an **8 MiB total raw-text budget per snapshot**. Supported text is strict UTF-8 or BOM-marked UTF-16/UTF-32. Large files, unsupported encodings, binary data, and non-source/config extensions retain hashes and metadata when readable, but their text is skipped with a reason.
+
+Common credential filenames (`.env*`, `secrets.*`, `credentials.*`, `.npmrc`, `.pypirc`, `.netrc`) and files inside `.git` are excluded from text capture. This is not a secret detector: other configuration files may contain secrets. Snapshots and reports can now contain private source/config contents. Review them before sharing, or turn text capture off. The CLI equivalent is **`--no-text`**.
+
+Legacy v1 snapshots remain readable, but their missing text cannot be reconstructed. Capture two new snapshots to obtain a complete text diff. New v2 JSON requires AppTrail 0.4.0 or later; older apps reject it. Existing history names, notes, and baselines remain available.
+
+Try the new [text-before](examples/text-before.json) and [text-after](examples/text-after.json) demo snapshots, or download the [text diff HTML report](examples/Text-diff-report.html).
 
 You can compare the same application in different folder locations or on different computers. File matching uses case-insensitive relative paths, following normal Windows conventions. AppTrail runs locally; it has no telemetry or cloud upload feature.
 
@@ -74,10 +92,11 @@ Snapshot JSON exports contain captured evidence, not these catalog annotations. 
 | PE binary metadata | Machine architecture, imported DLL names, and delay-imported DLL names |
 | Windows file version | Fixed file-version resource when present |
 | Capture issues | Read errors, skipped reparse points, malformed metadata, and detected changes during capture |
+| Saved text (optional) | Bounded eligible source/config contents for diffs, verified against their recorded byte hash |
 
 Comparison results distinguish **Added**, **Removed**, **Modified** (different content hash), **Metadata** (same hash, changed metadata), **Unchanged**, and **Unknown** (unreliable content comparison).
 
-HTML reports include before/after hashes, metadata, capture warnings, and UTC timestamps. They use no external assets or scripts and can be printed to PDF from a browser.
+HTML reports include before/after hashes, metadata, available saved-text diffs, capture warnings, and UTC timestamps. They use no external assets or scripts and can be printed to PDF from a browser.
 
 ## Run from source
 
@@ -97,6 +116,7 @@ The CLI is provided by the source distribution; the packaged EXE opens the deskt
 
 ```powershell
 python -m apptrail snapshot "C:\Path\To\Application" -o "C:\Snapshots\before.json"
+python -m apptrail snapshot "C:\Path\To\Application" -o "C:\Snapshots\metadata-only.json" --no-text
 python -m apptrail snapshot "C:\Path\To\Application" -o "C:\Snapshots\after.json"
 python -m apptrail compare "C:\Snapshots\before.json" "C:\Snapshots\after.json" -o "C:\Snapshots\report.html"
 ```
@@ -123,14 +143,14 @@ The build produces a windowed single-file EXE, runtime license notices, version 
 
 ## Limitations
 
-- This is a diagnostic snapshot tool, not a backup or restore tool. It does not save file contents.
+- This is a diagnostic snapshot tool, not a complete backup or restore tool. Only bounded eligible text contents are saved; binaries and other file contents are not backed up.
 - Capture is sequential, not atomic. Close the target application where practical. AppTrail detects size, last-write time, or file identity changes during capture but cannot detect every concurrent modification. Traversal may miss newly created or deleted files.
 - Symlinks, junctions, and other reparse points are skipped. This is not a security boundary against a hostile process changing paths during a scan. Empty directories, permissions, alternate data streams, and external dependencies are not captured.
 - Added/Removed means present only in one capture; access failures can produce apparent removals. Renames appear as removal and addition.
 - Static imports do not establish runtime load paths or missing dependencies. Architecture is the PE machine field, not a compatibility verdict; managed AnyCPU behavior is not inferred.
 - The bounded PE reader supports common PE32/PE32+ metadata and reports malformed or unsupported metadata rather than attempting recovery. Signature verification, import symbol resolution, registry capture, and runtime tracing are not included.
 
-Snapshots and reports contain local paths and binary metadata. Review them before sharing. Keep snapshots outside the application folder and use different filenames to preserve history.
+Snapshots and reports contain local paths, metadata, and potentially saved source/config contents. Review them before sharing. Keep snapshots outside the application folder and use different filenames to preserve history.
 
 ## Contributing
 

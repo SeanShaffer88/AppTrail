@@ -2,6 +2,7 @@
 from html import escape
 from .core import atomic_write
 from . import __version__
+from .textdiff import build_diff, diff_text, text_summary
 
 
 def render_html(comparison):
@@ -16,18 +17,31 @@ def render_html(comparison):
                   ('File version', entry.get('version')), ('Architecture', pe.get('architecture')),
                   ('Imports', ', '.join(pe.get('imports', [])) or None),
                   ('Delay imports', ', '.join(pe.get('delay_imports', [])) or None),
-                  ('Capture error', entry.get('error'))]
+                  ('Capture error', entry.get('error')), ('Text capture', text_summary(entry))]
         return '<dl>' + ''.join(f'<dt>{e(k)}</dt><dd>{e(v)}</dd>' for k, v in fields) + '</dl>'
 
     cards = ''.join(f'<div class="card"><strong>{value}</strong><span>{e(key)}</span></div>'
                     for key, value in comparison['counts'].items())
     rows = []
+    diff_budget = 2 * 1024 * 1024
     for change in comparison['changes']:
         if change['status'] == 'Unchanged':
             continue
         notes = '<ul>' + ''.join(f'<li>{e(n)}</li>' for n in change['notes']) + '</ul>'
+        if diff_budget <= 0:
+            diff_html = '<p>Text diff omitted: the report reached its 2 MiB diff budget. Use the desktop text diff view for this file.</p>'
+        else:
+            model = build_diff(change)
+            lines = ''.join(f'<span class="diff-{line["kind"]}">{e(diff_text({"lines": [line]}, show_endings=True))}</span>' for line in model['lines'])
+            if len(lines.encode('utf-8')) > diff_budget:
+                diff_html = '<p>Text diff omitted: this file exceeds the remaining report diff budget. Use the desktop text diff view.</p>'
+            else:
+                diff_budget -= len(lines.encode('utf-8'))
+                diff_html = f'<p>{e(model["message"])}</p><p><small>Before: {e(model["before_summary"])}<br>After: {e(model["after_summary"])}</small></p>'
+                if lines:
+                    diff_html += f'<pre class="text-diff">{lines}</pre>'
         rows.append(f'<tr><td><span class="badge">{e(change["status"])}</span></td>'
-                    f'<td><strong>{e(change["path"])}</strong>{notes}<details><summary>Show captured evidence</summary>'
+                    f'<td><strong>{e(change["path"])}</strong>{notes}<details><summary>Show saved text diff</summary>{diff_html}</details><details><summary>Show captured evidence</summary>'
                     f'<div class="evidence"><section><h3>Before</h3>{file_details(change["before"])}</section>'
                     f'<section><h3>After</h3>{file_details(change["after"])}</section></div></details></td></tr>')
     warnings = []
@@ -62,6 +76,7 @@ th{{background:#e9eef6;font-size:13px}}td:first-child{{width:120px}}.badge{{back
 ul{{padding-left:20px}}summary{{cursor:pointer;color:#245d9e}}dt{{font-size:12px;color:#596b80;margin-top:10px}}dd{{margin:0;font-family:Consolas,monospace;font-size:12px}}
 aside{{background:#fff4d9;border:1px solid #e4c677;padding:12px 22px;border-radius:12px;margin:20px 0}}
 footer{{margin-top:28px;color:#596b80;font-size:13px}}@media(max-width:650px){{.roots,.evidence{{grid-template-columns:1fr}}main{{padding:24px 12px}}th,td{{padding:10px}}}}
+.text-diff{{white-space:pre;overflow:auto;font:12px/1.6 Consolas,monospace;border:1px solid #dce3ee;padding:12px}}.diff-add{{background:#e6ffed;color:#14532d}}.diff-remove{{background:#ffeef0;color:#8b1a2b}}.diff-header,.diff-hunk{{color:#245d9e}}.diff-meta{{color:#785200}}
 @media print{{body{{background:white}}main{{padding:0}}details{{display:block}}.card{{break-inside:avoid}}}}
 </style></head><body><main><header><small>APPTRAIL / LOCAL EVIDENCE</small>
 <h1>Application change report</h1><p class="muted">Generated {e(comparison['created_at'])}. Content changes are verified by SHA-256.</p></header>
@@ -72,7 +87,9 @@ footer{{margin-top:28px;color:#596b80;font-size:13px}}@media(max-width:650px){{.
 Added/removed means present in only one capture; unreadable directories can affect those results.
 Renames appear as removal and addition. Imports are static declarations, including delay imports; they do not prove a DLL is missing or was loaded.
 Architecture changes are observations, not a diagnosis; managed AnyCPU behavior is not inferred.
-This report contains paths and metadata, not file contents. No network requests or scripts are used.</footer></main></body></html>'''
+This report may include saved source/config contents in text diffs. Review it before sharing.
+Text capture is limited to 256 KiB / 3,000 lines per eligible file and 8 MiB per snapshot; report diff markup is limited to 2 MiB.
+No network requests or scripts are used.</footer></main></body></html>'''
 
 
 def export_report(comparison, path):

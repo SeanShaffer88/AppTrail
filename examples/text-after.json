@@ -1,0 +1,42 @@
+{
+  "schema": "apptrail.snapshot.v2",
+  "root": "C:\\ExampleApps\\TextDiffDemo",
+  "started_at": "2026-10-21T11:00:00+00:00",
+  "completed_at": "2026-10-21T11:00:00+00:00",
+  "files": [
+    {
+      "path": "main.py",
+      "size": 116,
+      "mtime_ns": 1792628957388720000,
+      "sha256": "2bc707d214bbcfde4f57d99c880e6384ce879157f1da849471f5e6c2dfdb24b0",
+      "version": null,
+      "pe": null,
+      "error": null,
+      "text": {
+        "encoding": "utf-8",
+        "content": "def format_build(version, channel=\"stable\"):\n    return f\"Build {version} ({channel})\"\n\ndef retries():\n    return 4\n"
+      },
+      "text_status": "captured"
+    },
+    {
+      "path": "settings.json",
+      "size": 77,
+      "mtime_ns": 1792628957388720000,
+      "sha256": "8613b225e1b926d8749e91cdb0eca0718bab3a9562de811e65a4b739ecda22e6",
+      "version": null,
+      "pe": null,
+      "error": null,
+      "text": {
+        "encoding": "utf-8",
+        "content": "{\n  \"logging\": \"debug\",\n  \"timeout_seconds\": 30,\n  \"plugins_enabled\": true\n}\n"
+      },
+      "text_status": "captured"
+    }
+  ],
+  "warnings": [],
+  "text_capture": {
+    "enabled": true,
+    "policy": "source-config-v1",
+    "captured_bytes": 193
+  }
+}

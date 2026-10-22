@@ -132,6 +132,34 @@ class HistoryGuiTests(unittest.TestCase):
         self.assertFalse(self.history.path(self.old_id).exists())
         self.assertEqual(self.history.entries(deleted=True), [])
 
+    def test_text_diff_window_renders_saved_lines_and_colors(self):
+        self.app.history_tree.selection_set([self.old_id, self.new_id])
+        self.app.compare_history()
+        self.finish_job()
+        self.app.tree.selection_set('0')
+        window = self.app.details()
+        try:
+            self.assertEqual(window.model['state'], 'available')
+            self.assertIn('-before', window.text.get('1.0', 'end'))
+            self.assertIn('+after', window.text.get('1.0', 'end'))
+            self.assertTrue(window.text.tag_ranges('add'))
+            self.assertTrue(window.text.tag_ranges('remove'))
+            window.show_endings.set(True)
+            window.refresh_diff()
+            self.assertIn('no final newline', window.text.get('1.0', 'end'))
+        finally:
+            window.destroy()
+
+    def test_desktop_text_capture_can_be_disabled(self):
+        self.app.folder.set(str(self.folder))
+        self.app.include_text.set(False)
+        self.app.capture()
+        self.finish_job()
+        identity = self.app.history_tree.selection()[0]
+        snapshot = self.history.load(identity)
+        self.assertFalse(snapshot['text_capture']['enabled'])
+        self.assertIsNone(snapshot['files'][0]['text'])
+
 
 if __name__ == '__main__':
     unittest.main()

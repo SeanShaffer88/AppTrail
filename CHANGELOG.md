@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0 — 2026-10-21
+
+- Save bounded source/config text with new snapshots and show color-coded unified diffs in file details.
+- Display line-ending, encoding, BOM, and missing-final-newline evidence; optionally show line-ending markers.
+- Include escaped saved-text diffs in HTML reports, with an explicit report size budget.
+- Introduce v2 snapshots with text capture policy and hash-verified payloads; retain v1 reading without inventing missing text.
+- Add desktop capture opt-out and CLI --no-text, source/config allowlists, common credential exclusions, and per-file/snapshot budgets.
+
 ## 0.3.0 — 2026-10-21
 
 - Rename snapshots and add searchable build/commit/test notes without changing evidence hashes.

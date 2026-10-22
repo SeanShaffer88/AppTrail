@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src 'none'; base-uri 'none'; form-action 'none'">
+<title>AppTrail · Application change report</title><style>
+*{box-sizing:border-box}body{margin:0;background:#f4f6fa;color:#17263b;font:15px/1.6 'Segoe UI',sans-serif}
+main{max-width:1160px;margin:auto;padding:48px 28px}header small{color:#366dba;letter-spacing:2px;font-weight:700}
+h1{font-size:38px;line-height:1.2;margin:12px 0}h2{font-size:18px}h3{font-size:15px}
+.muted,small{color:#596b80}.cards{display:flex;flex-wrap:wrap;gap:12px;margin:28px 0}
+.card{flex:1;min-width:110px;background:white;border:1px solid #dce3ee;border-radius:12px;padding:16px}
+.card strong{display:block;font-size:30px}.card span{color:#596b80}.roots,.evidence{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.roots{border-top:1px solid #dce3ee;padding:12px 0 26px}p,td,dd,li{overflow-wrap:anywhere}.capture-note{white-space:pre-wrap;background:#eaf0fa;padding:12px;border-radius:8px}
+table{width:100%;border-collapse:collapse;background:white}th,td{text-align:left;vertical-align:top;padding:18px;border-bottom:1px solid #dce3ee}
+th{background:#e9eef6;font-size:13px}td:first-child{width:120px}.badge{background:#eaf0fa;border-radius:6px;padding:4px 8px;font-size:12px;font-weight:700}
+ul{padding-left:20px}summary{cursor:pointer;color:#245d9e}dt{font-size:12px;color:#596b80;margin-top:10px}dd{margin:0;font-family:Consolas,monospace;font-size:12px}
+aside{background:#fff4d9;border:1px solid #e4c677;padding:12px 22px;border-radius:12px;margin:20px 0}
+footer{margin-top:28px;color:#596b80;font-size:13px}@media(max-width:650px){.roots,.evidence{grid-template-columns:1fr}main{padding:24px 12px}th,td{padding:10px}}
+.text-diff{white-space:pre;overflow:auto;font:12px/1.6 Consolas,monospace;border:1px solid #dce3ee;padding:12px}.diff-add{background:#e6ffed;color:#14532d}.diff-remove{background:#ffeef0;color:#8b1a2b}.diff-header,.diff-hunk{color:#245d9e}.diff-meta{color:#785200}
+@media print{body{background:white}main{padding:0}details{display:block}.card{break-inside:avoid}}
+</style></head><body><main><header><small>APPTRAIL / LOCAL EVIDENCE</small>
+<h1>Application change report</h1><p class="muted">Generated 2026-10-22T00:29:17+00:00. Content changes are verified by SHA-256.</p></header>
+<div class="cards"><div class="card"><strong>0</strong><span>Added</span></div><div class="card"><strong>0</strong><span>Removed</span></div><div class="card"><strong>2</strong><span>Modified</span></div><div class="card"><strong>0</strong><span>Metadata</span></div><div class="card"><strong>0</strong><span>Unchanged</span></div><div class="card"><strong>0</strong><span>Unknown</span></div></div><div class="roots"><div><h2>Before</h2><h3>Before source/config update · Baseline</h3><p>C:\ExampleApps\TextDiffDemo</p><small>2026-10-21T10:00:00+00:00 — 2026-10-21T10:00:00+00:00</small><p class="capture-note">Commit abc123 · known-good build</p></div><div><h2>After</h2><h3>After source/config update</h3><p>C:\ExampleApps\TextDiffDemo</p><small>2026-10-21T11:00:00+00:00 — 2026-10-21T11:00:00+00:00</small><p class="capture-note">Commit def456 · retry and logging changes</p></div></div>
+<h2>Changes and evidence</h2><table><thead><tr><th>Result</th><th>File and observations</th></tr></thead>
+<tbody><tr><td><span class="badge">Modified</span></td><td><strong>main.py</strong><ul><li>SHA-256 content hash changed.</li><li>Size: 86 → 116</li><li>Last-write timestamp changed.</li></ul><details><summary>Show saved text diff</summary><p>3 added line(s), 3 removed line(s). Unified diff with 3 lines of context.</p><p><small>Before: utf-8 · 86 bytes · LF: 5 · final newline<br>After: utf-8 · 116 bytes · LF: 5 · final newline</small></p><pre class="text-diff"><span class="diff-header">--- before/main.py
+</span><span class="diff-header">+++ after/main.py
+</span><span class="diff-hunk">@@ -1,5 +1,5 @@
+</span><span class="diff-remove">-def format_build(version):  ⟦LF⟧
+</span><span class="diff-remove">-    return f&quot;Build {version}&quot;  ⟦LF⟧
+</span><span class="diff-add">+def format_build(version, channel=&quot;stable&quot;):  ⟦LF⟧
+</span><span class="diff-add">+    return f&quot;Build {version} ({channel})&quot;  ⟦LF⟧
+</span><span class="diff-context">   ⟦LF⟧
+</span><span class="diff-context"> def retries():  ⟦LF⟧
+</span><span class="diff-remove">-    return 2  ⟦LF⟧
+</span><span class="diff-add">+    return 4  ⟦LF⟧
+</span></pre></details><details><summary>Show captured evidence</summary><div class="evidence"><section><h3>Before</h3><dl><dt>Bytes</dt><dd>86</dd><dt>SHA-256</dt><dd>b75302ea78a1ca72901af268caf8fbf09b180e7b435ec204ab14bc2cbbca8625</dd><dt>File version</dt><dd>Unavailable</dd><dt>Architecture</dt><dd>Unavailable</dd><dt>Imports</dt><dd>Unavailable</dd><dt>Delay imports</dt><dd>Unavailable</dd><dt>Capture error</dt><dd>Unavailable</dd><dt>Text capture</dt><dd>utf-8 · 86 bytes · LF: 5 · final newline</dd></dl></section><section><h3>After</h3><dl><dt>Bytes</dt><dd>116</dd><dt>SHA-256</dt><dd>2bc707d214bbcfde4f57d99c880e6384ce879157f1da849471f5e6c2dfdb24b0</dd><dt>File version</dt><dd>Unavailable</dd><dt>Architecture</dt><dd>Unavailable</dd><dt>Imports</dt><dd>Unavailable</dd><dt>Delay imports</dt><dd>Unavailable</dd><dt>Capture error</dt><dd>Unavailable</dd><dt>Text capture</dt><dd>utf-8 · 116 bytes · LF: 5 · final newline</dd></dl></section></div></details></td></tr><tr><td><span class="badge">Modified</span></td><td><strong>settings.json</strong><ul><li>SHA-256 content hash changed.</li><li>Size: 49 → 77</li><li>Last-write timestamp changed.</li></ul><details><summary>Show saved text diff</summary><p>3 added line(s), 2 removed line(s). Unified diff with 3 lines of context.</p><p><small>Before: utf-8 · 49 bytes · LF: 4 · final newline<br>After: utf-8 · 77 bytes · LF: 5 · final newline</small></p><pre class="text-diff"><span class="diff-header">--- before/settings.json
+</span><span class="diff-header">+++ after/settings.json
+</span><span class="diff-hunk">@@ -1,4 +1,5 @@
+</span><span class="diff-context"> {  ⟦LF⟧
+</span><span class="diff-remove">-  &quot;logging&quot;: &quot;info&quot;,  ⟦LF⟧
+</span><span class="diff-remove">-  &quot;timeout_seconds&quot;: 15  ⟦LF⟧
+</span><span class="diff-add">+  &quot;logging&quot;: &quot;debug&quot;,  ⟦LF⟧
+</span><span class="diff-add">+  &quot;timeout_seconds&quot;: 30,  ⟦LF⟧
+</span><span class="diff-add">+  &quot;plugins_enabled&quot;: true  ⟦LF⟧
+</span><span class="diff-context"> }  ⟦LF⟧
+</span></pre></details><details><summary>Show captured evidence</summary><div class="evidence"><section><h3>Before</h3><dl><dt>Bytes</dt><dd>49</dd><dt>SHA-256</dt><dd>9ccf832fd2b218bc8e07e451d3a66242e1280a88f293a95b58d79a618f1f2c3b</dd><dt>File version</dt><dd>Unavailable</dd><dt>Architecture</dt><dd>Unavailable</dd><dt>Imports</dt><dd>Unavailable</dd><dt>Delay imports</dt><dd>Unavailable</dd><dt>Capture error</dt><dd>Unavailable</dd><dt>Text capture</dt><dd>utf-8 · 49 bytes · LF: 4 · final newline</dd></dl></section><section><h3>After</h3><dl><dt>Bytes</dt><dd>77</dd><dt>SHA-256</dt><dd>8613b225e1b926d8749e91cdb0eca0718bab3a9562de811e65a4b739ecda22e6</dd><dt>File version</dt><dd>Unavailable</dd><dt>Architecture</dt><dd>Unavailable</dd><dt>Imports</dt><dd>Unavailable</dd><dt>Delay imports</dt><dd>Unavailable</dd><dt>Capture error</dt><dd>Unavailable</dd><dt>Text capture</dt><dd>utf-8 · 77 bytes · LF: 5 · final newline</dd></dl></section></div></details></td></tr></tbody></table>
+<footer>AppTrail 0.4.0 · Times use UTC. Snapshots are sequential observations, not atomic backups.
+Added/removed means present in only one capture; unreadable directories can affect those results.
+Renames appear as removal and addition. Imports are static declarations, including delay imports; they do not prove a DLL is missing or was loaded.
+Architecture changes are observations, not a diagnosis; managed AnyCPU behavior is not inferred.
+This report may include saved source/config contents in text diffs. Review it before sharing.
+Text capture is limited to 256 KiB / 3,000 lines per eligible file and 8 MiB per snapshot; report diff markup is limited to 2 MiB.
+No network requests or scripts are used.</footer></main></body></html>

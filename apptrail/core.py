@@ -7,8 +7,11 @@ import tempfile
 from datetime import datetime, timezone
 
 from .pe import inspect_pe, file_version
+from .textdiff import (MAX_TEXT_BYTES, MAX_TOTAL_TEXT_BYTES, POLICY,
+                       eligibility, decode_text, validate_text)
 
-SCHEMA = 'apptrail.snapshot.v1'
+SCHEMA = 'apptrail.snapshot.v2'
+LEGACY_SCHEMA = 'apptrail.snapshot.v1'
 
 
 def now():
@@ -42,12 +45,15 @@ def is_link(info):
     return stat.S_ISLNK(info.st_mode) or bool(getattr(info, 'st_file_attributes', 0) & 0x400)
 
 
-def snapshot_folder(root, progress=lambda message: None, cancelled=lambda: False):
+def snapshot_folder(root, progress=lambda message: None, cancelled=lambda: False, capture_text=True):
     root = Path(root).resolve(strict=True)
     if not root.is_dir():
         raise ValueError('Choose an application folder.')
     result = {'schema': SCHEMA, 'root': str(root), 'started_at': now(),
-              'completed_at': None, 'files': [], 'warnings': []}
+              'completed_at': None, 'files': [], 'warnings': [],
+              'text_capture': {'enabled': bool(capture_text), 'policy': POLICY,
+                               'captured_bytes': 0}}
+    text_bytes = 0
     warnings = result['warnings']
     pending = [root]
     while pending:
@@ -80,15 +86,34 @@ def snapshot_folder(root, progress=lambda message: None, cancelled=lambda: False
                     continue
                 progress(f"Hashing {relative}")
                 entry = {'path': relative, 'size': before.st_size, 'mtime_ns': before.st_mtime_ns,
-                         'sha256': None, 'version': None, 'pe': None, 'error': None}
+                         'sha256': None, 'version': None, 'pe': None, 'error': None,
+                         'text': None, 'text_status': 'disabled' if not capture_text else eligibility(relative)}
+                if entry['text_status'] == 'eligible':
+                    if before.st_size > MAX_TEXT_BYTES:
+                        entry['text_status'] = 'too_large'
+                    elif before.st_size > MAX_TOTAL_TEXT_BYTES - text_bytes:
+                        entry['text_status'] = 'budget_exceeded'
+                collect_text = entry['text_status'] == 'eligible'
+                raw_text = bytearray()
                 result['files'].append(entry)
                 digest = hashlib.sha256()
+                bytes_read = 0
                 with path.open('rb') as stream:
                     while chunk := stream.read(1024 * 1024):
                         if cancelled():
                             raise InterruptedError('Snapshot cancelled. No partial snapshot was saved.')
                         digest.update(chunk)
+                        bytes_read += len(chunk)
+                        if collect_text:
+                            if len(raw_text) + len(chunk) > MAX_TEXT_BYTES:
+                                collect_text = False
+                                raw_text.clear()
+                                entry['text_status'] = 'too_large'
+                            else:
+                                raw_text.extend(chunk)
                 entry['sha256'] = digest.hexdigest()
+                if collect_text:
+                    entry['text'], entry['text_status'] = decode_text(bytes(raw_text))
                 try:
                     entry['pe'] = inspect_pe(path)
                     if entry['pe']:
@@ -96,30 +121,38 @@ def snapshot_folder(root, progress=lambda message: None, cancelled=lambda: False
                 except (OSError, ValueError) as exc:
                     warnings.append({'path': relative, 'message': f'PE metadata unavailable: {exc}'})
                 after = path.stat(follow_symlinks=False)
-                if (before.st_size, before.st_mtime_ns, before.st_ino) != (after.st_size, after.st_mtime_ns, after.st_ino):
+                if bytes_read != before.st_size or (before.st_size, before.st_mtime_ns, before.st_ino) != (after.st_size, after.st_mtime_ns, after.st_ino):
                     entry['sha256'] = None
+                    entry['text'] = None
+                    entry['text_status'] = 'unstable'
                     entry['error'] = 'File changed during capture; recapture while the application is idle.'
+                elif entry['text'] is not None:
+                    text_bytes += len(raw_text)
             except OSError as exc:
                 if result['files'] and result['files'][-1]['path'] == relative:
                     result['files'][-1]['error'] = str(exc)
                     result['files'][-1]['sha256'] = None
+                    result['files'][-1]['text'] = None
+                    result['files'][-1]['text_status'] = 'read_error'
                 warnings.append({'path': relative, 'message': f'Cannot read file: {exc}'})
     result['files'].sort(key=lambda e: e['path'].casefold())
     result['completed_at'] = now()
+    result['text_capture']['captured_bytes'] = text_bytes
     return result
 
 
 def load_snapshot(path):
     with open(path, encoding='utf-8') as stream:
         data = json.load(stream)
-    if not isinstance(data, dict) or data.get('schema') != SCHEMA:
-        raise ValueError('This is not an AppTrail v1 snapshot.')
+    if not isinstance(data, dict) or data.get('schema') not in (SCHEMA, LEGACY_SCHEMA):
+        raise ValueError('This is not an AppTrail v1 or v2 snapshot.')
     for field in ('root', 'started_at', 'completed_at'):
         if not isinstance(data.get(field), str):
             raise ValueError(f'Invalid snapshot field: {field}')
     if not isinstance(data.get('files'), list) or not isinstance(data.get('warnings'), list):
         raise ValueError('Invalid snapshot file or warning list.')
     seen = set()
+    total_text = 0
     for entry in data['files']:
         if not isinstance(entry, dict):
             raise ValueError('Invalid file entry.')
@@ -138,6 +171,9 @@ def load_snapshot(path):
         for field in ('version', 'error'):
             if entry.get(field) is not None and not isinstance(entry[field], str):
                 raise ValueError(f'Invalid {field}: {name}')
+        total_text += validate_text(entry)
+        if total_text > MAX_TOTAL_TEXT_BYTES:
+            raise ValueError('Snapshot exceeds the total text capture budget.')
         pe = entry.get('pe')
         if pe is not None:
             if not isinstance(pe, dict) or not isinstance(pe.get('architecture'), str):
@@ -148,6 +184,12 @@ def load_snapshot(path):
     for warning in data['warnings']:
         if not isinstance(warning, dict) or not all(isinstance(warning.get(k), str) for k in ('path', 'message')):
             raise ValueError('Invalid snapshot warning.')
+    capture = data.get('text_capture')
+    if data['schema'] == SCHEMA or capture is not None:
+        if not isinstance(capture, dict) or type(capture.get('enabled')) is not bool or capture.get('policy') != POLICY:
+            raise ValueError('Invalid text capture policy.')
+        if type(capture.get('captured_bytes')) is not int or capture['captured_bytes'] != total_text or (not capture['enabled'] and any(f.get('text') is not None for f in data['files'])):
+            raise ValueError('Text capture byte count does not match the saved evidence.')
     return data
 
 

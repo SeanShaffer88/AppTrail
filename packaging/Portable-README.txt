@@ -1,4 +1,4 @@
-AppTrail 0.3.0 — Windows x64 portable edition
+AppTrail 0.4.0 — Windows x64 portable edition
 
 Source and updates: https://github.com/SeanShaffer88/AppTrail
 AppTrail source is MIT licensed. See licenses/AppTrail-MIT.txt.
@@ -10,6 +10,19 @@ access, or installer is needed. You can move the EXE to another folder.
 2. Capture the folder again after changes. Both captures stay in Snapshot history.
 3. Select two history rows (Ctrl-click) and click Compare selected (2).
 4. Click Export HTML report to save a readable report.
+
+Text diffs:
+- Leave Capture source/config text for diffs enabled for new captures.
+- In Comparison, double-click a file or choose View text diff to see saved changes.
+- Green lines are added, red lines removed. Show line endings displays CRLF/LF/CR
+  and missing-final-newline markers. Encoding/BOM details are shown above the diff.
+- Text is limited to 256 KiB and 3,000 lines per eligible file, 8 MiB per snapshot.
+  UTF-8 and BOM-marked UTF-16/UTF-32 are supported. Skipped text has a reason.
+- Common credential filenames and .git contents are excluded, but other config
+  files can contain secrets. Snapshots/reports may contain private code or secrets;
+  review before sharing or disable text capture. Source CLI: --no-text.
+- Older v1 snapshots remain readable but do not contain reconstructable text.
+  Capture two new snapshots for a complete diff. New v2 JSON needs AppTrail 0.4+.
 
 Use Import JSON to bring existing snapshots into history. Imports keep a local
 copy and identical imports are deduplicated. Save JSON also creates a history
@@ -42,7 +55,8 @@ Capture is sequential, not an atomic backup. Close the target application when
 practical. Files that cannot be read reliably are flagged. Reparse points are
 skipped. Renames appear as removal and addition. Static imports do not prove
 which DLLs loaded or caused a failure. Reports contain local paths and metadata;
-review before sharing. File contents are not backed up.
+review before sharing. Only bounded eligible text contents are saved; this is
+not a complete backup or restore tool.
 
 Runtime notices are in licenses/Python-and-bundled-components.txt and are also
 embedded in the EXE. Keep the notices with copies you redistribute.
