@@ -160,6 +160,55 @@ class HistoryGuiTests(unittest.TestCase):
         self.assertFalse(snapshot['text_capture']['enabled'])
         self.assertIsNone(snapshot['files'][0]['text'])
 
+    def test_terminal_default_toggle_persists_and_updates_open_diff(self):
+        from apptrail.gui import TextDiffWindow, SnapshotEditor
+        from apptrail.theme import Theme, PALETTES
+        from tests.test_side_diff import change
+        self.assertEqual(self.app.theme.mode.get(), 'dark')
+        window = TextDiffWindow(self.root, change('return 1\n', 'return 2\n'))
+        editor = SnapshotEditor(self.root, self.history, self.history.get(self.old_id), lambda _: None)
+        try:
+            widget = window.side_texts[1]
+            original = widget.get('1.0', 'end')
+            self.assertEqual(widget.cget('background'), PALETTES['dark']['field'])
+            self.assertEqual(editor.notes.cget('background'), PALETTES['dark']['field'])
+            self.assertEqual(widget.get(*widget.tag_ranges('syntax_keyword')[:2]), 'return')
+            window.jump_change(1)
+            self.app.theme.toggle()
+            self.assertEqual(widget.cget('background'), PALETTES['light']['field'])
+            self.assertEqual(widget.tag_cget('syntax_keyword', 'foreground'), PALETTES['light']['keyword'])
+            self.assertEqual(widget.tag_cget('changed', 'background'), PALETTES['light']['add'])
+            self.assertEqual(widget.get('1.0', 'end'), original)
+            self.assertEqual(window.position.get(), 'Change 1 of 1')
+            self.assertTrue(widget.tag_ranges('current'))
+            restored = Theme(self.root, self.history.directory / 'preferences.json')
+            self.assertEqual(restored.mode.get(), 'light')
+        finally:
+            editor.destroy()
+            window.destroy()
+
+    def test_syntax_alignment_survives_insertions_unicode_and_refresh(self):
+        from apptrail.gui import TextDiffWindow
+        from tests.test_side_diff import change
+        window = TextDiffWindow(self.root, change('return 1\n', 'label = "😀"; return 2\nreturn 1\n'))
+        try:
+            widget = window.side_texts[1]
+            self.assertEqual(widget.get(*widget.tag_ranges('syntax_keyword')[:2]), 'return')
+            window.show_endings.set(True)
+            window.refresh_diff()
+            self.assertEqual(widget.get(*widget.tag_ranges('syntax_keyword')[:2]), 'return')
+            self.assertIn('⟦LF⟧', widget.get('1.0', 'end'))
+            self.assertTrue(window.side_texts[0].tag_ranges('spacer'))
+        finally:
+            window.destroy()
+
+    def test_malformed_theme_setting_falls_back_to_dark(self):
+        from apptrail.theme import Theme
+        path = self.history.directory / 'preferences.json'
+        for value in ('invalid json', '{"theme": []}', '{"theme": "unknown"}', '[]'):
+            path.write_text(value)
+            self.assertEqual(Theme(self.root, path).mode.get(), 'dark')
+
     def test_side_diff_navigation_numbers_and_synchronized_scrolling(self):
         from apptrail.gui import TextDiffWindow
         from tests.test_side_diff import change

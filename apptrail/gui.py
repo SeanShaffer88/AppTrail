@@ -10,6 +10,8 @@ from .core import snapshot_folder, save_snapshot, compare
 from .report import export_report
 from .history import SnapshotHistory
 from .textdiff import build_diff, diff_text, side_by_side, side_line
+from .syntax import highlight_lines
+from .theme import Theme
 
 
 class AppTrail:
@@ -27,15 +29,18 @@ class AppTrail:
         self.comparison = None
         self.buttons = []
         style = ttk.Style(root)
-        if 'vista' in style.theme_names():
-            style.theme_use('vista')
+        self.theme = Theme(root, self.history.directory / 'preferences.json')
         style.configure('Title.TLabel', font=('Segoe UI', 26, 'bold'))
-        style.configure('Subtitle.TLabel', font=('Segoe UI', 10), foreground='#51647a')
+        style.configure('Subtitle.TLabel', font=('Segoe UI', 10))
         style.configure('Treeview', rowheight=29, font=('Segoe UI', 10))
         style.configure('Treeview.Heading', font=('Segoe UI', 10, 'bold'))
         frame = ttk.Frame(root, padding=24)
         frame.pack(fill='both', expand=True)
-        ttk.Label(frame, text='AppTrail', style='Title.TLabel').pack(anchor='w')
+        heading = ttk.Frame(frame)
+        heading.pack(fill='x')
+        ttk.Label(heading, text='AppTrail', style='Title.TLabel').pack(side='left')
+        ttk.Checkbutton(heading, text='Terminal dark theme', variable=self.theme.mode,
+                        onvalue='dark', offvalue='light', command=self.change_theme).pack(side='right')
         ttk.Label(frame, text='Capture a working baseline. Compare what changed. Keep the evidence.', style='Subtitle.TLabel').pack(anchor='w', pady=(0, 18))
         capture = ttk.LabelFrame(frame, text='1 · Snapshot an application folder', padding=12)
         capture.pack(fill='x')
@@ -101,6 +106,11 @@ class AppTrail:
         root.protocol('WM_DELETE_WINDOW', self.close)
         self.refresh_history()
         self.poll_id = root.after(100, self.poll)
+
+    def change_theme(self):
+        # Checkbutton has already changed the value; toggle saves and applies it.
+        self.theme.mode.set('light' if self.theme.mode.get() == 'dark' else 'dark')
+        self.theme.toggle()
 
     def build_history(self, frame):
         ttk.Label(frame, text='Saved snapshots', font=('Segoe UI', 16, 'bold')).pack(anchor='w')
@@ -535,6 +545,10 @@ class TextDiffWindow(tk.Toplevel):
         self.minsize(720, 500)
         self.model = build_diff(change)
         self.aligned = side_by_side(change)
+        self.syntax = {}
+        for side in ('before', 'after'):
+            entry = change.get(side) or {}
+            self.syntax[side] = highlight_lines(change['path'], (entry.get('text') or {}).get('content', ''))
         self.change_index = -1
         frame = ttk.Frame(self, padding=16)
         frame.pack(fill='both', expand=True)
@@ -557,6 +571,7 @@ class TextDiffWindow(tk.Toplevel):
         self.next_button.pack(side='left', padx=8)
         self.position = tk.StringVar(value=f'{len(self.aligned["changes"])} change(s)')
         ttk.Label(toolbar, textvariable=self.position).pack(side='left')
+        ttk.Label(toolbar, text=self.syntax['after'][0] + ' · syntax colors', style='Subtitle.TLabel').pack(side='right')
         panes = ttk.Frame(side_frame)
         panes.pack(fill='both', expand=True)
         self.side_texts = []
@@ -571,6 +586,7 @@ class TextDiffWindow(tk.Toplevel):
             widget.tag_configure('changed', background='#ffeef0' if column == 0 else '#e6ffed')
             widget.tag_configure('spacer', background='#eef1f5')
             widget.tag_configure('current', borderwidth=1, relief='solid')
+            widget._diff_side = 'remove' if column == 0 else 'add'
             self.side_texts.append(widget)
             panes.columnconfigure(column, weight=1, uniform='diff')
         self.side_scroll = ttk.Scrollbar(panes, orient='vertical', command=self.scroll_sides)
@@ -613,6 +629,9 @@ class TextDiffWindow(tk.Toplevel):
         ttk.Label(frame, text='Saved evidence only · green = added, red = removed · F7 / Shift+F7 jump between changes',
                   style='Subtitle.TLabel', wraplength=950).pack(before=self.tabs, side='bottom', anchor='w', pady=(8, 0))
         self.refresh_diff()
+        theme = getattr(parent, '_apptrail_theme', None)
+        if theme:
+            theme.paint(self)
 
     def scroll_sides(self, *args):
         for widget in self.side_texts:
@@ -652,9 +671,18 @@ class TextDiffWindow(tk.Toplevel):
             widget.delete('1.0', 'end')
             if not self.aligned['rows']:
                 widget.insert('1.0', self.model['message'])
-            for row in self.aligned['rows']:
+            for display_row, row in enumerate(self.aligned['rows'], 1):
                 tag = 'spacer' if row[side] is None else 'changed' if row['kind'] != 'equal' else 'context'
                 widget.insert('end', side_line(row[side + '_number'], row[side], self.show_endings.get()), (tag,))
+                number = row[side + '_number']
+                if number is not None:
+                    widget.tag_add('line_number', f'{display_row}.0', f'{display_row}.7')
+                    content = row[side].rstrip('\r\n')
+                    for start, end, category in self.syntax[side][1][number - 1]:
+                        # Tcl 8.6 counts supplementary Unicode as surrogate pairs.
+                        a = int(widget.tk.call('string', 'length', content[:start])) + 7
+                        b = int(widget.tk.call('string', 'length', content[:end])) + 7
+                        widget.tag_add('syntax_' + category, f'{display_row}.{a}', f'{display_row}.{b}')
             widget.configure(state='disabled')
         state = 'normal' if self.aligned['changes'] else 'disabled'
         self.previous_button.configure(state=state)
@@ -702,6 +730,9 @@ class SnapshotEditor(tk.Toplevel):
         self.grab_set()
         name_entry.focus_set()
         name_entry.selection_range(0, 'end')
+        theme = getattr(parent, '_apptrail_theme', None)
+        if theme:
+            theme.paint(self)
 
     def save(self):
         try:

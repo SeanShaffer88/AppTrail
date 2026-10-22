@@ -4,9 +4,10 @@ Open an issue to describe a bug or discuss a larger change. Focused pull request
 
 ## Local development
 
-Use Python 3.11 or later with Tkinter. No pip runtime dependencies are required.
+Use Python 3.11 or later with Tkinter. Install the pinned Pygments runtime dependency before running from source.
 
 ```powershell
+python -m pip install -r requirements.txt
 python -m apptrail
 python -m unittest discover -s tests -v
 ```

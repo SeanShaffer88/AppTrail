@@ -67,6 +67,10 @@ def main():
         parser.error('The Python distribution LICENSE.txt is required for redistribution.')
     shutil.copy2(python_license, licenses / 'Python-and-bundled-components.txt')
     shutil.copy2(source / 'LICENSE', licenses / 'AppTrail-MIT.txt')
+    from importlib.metadata import distribution
+    pygments = distribution('Pygments')
+    license_file = next(f for f in pygments.files if str(f).endswith('licenses/LICENSE'))
+    shutil.copy2(pygments.locate_file(license_file), licenses / 'Pygments-BSD.txt')
     icon = work / 'AppTrail.ico'
     make_icon(icon)
     subprocess.run([

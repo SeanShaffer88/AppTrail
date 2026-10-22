@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.0 — 2026-10-21
+
+- Terminal-inspired dark theme by default, with a persistent dark/light toggle at the top right. Diff and snapshot notes windows update with the app theme.
+- Offline Pygments syntax colors in side-by-side source/config diffs, including multiline context and Unicode-aware text ranges. Unknown formats stay plain text.
+- Preserved change backgrounds, line numbers, navigation, and line-ending markers. Pygments is pinned and its BSD license bundled in portable releases.
+
 ## 0.5.0 — 2026-10-21
 
 - Default side-by-side saved-text diff with original line numbers, aligned spacer rows, red/green highlights, and synchronized vertical scrolling.

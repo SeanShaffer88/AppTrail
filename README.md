@@ -31,7 +31,7 @@ The text diff screenshot shows AppTrail 0.4.0; history/editor show 0.3.0, and th
 ## Download and run
 
 1. Open the [latest release](https://github.com/SeanShaffer88/AppTrail/releases/latest).
-2. Download **AppTrail-0.5.0-Windows-x64.zip**, extract it, and double-click **AppTrail.exe**. A direct EXE download is also available.
+2. Download **AppTrail-0.6.0-Windows-x64.zip**, extract it, and double-click **AppTrail.exe**. A direct EXE download is also available.
 3. No Python installation, command window, administrator access, or account is required. Keep the license notices with copies you redistribute.
 
 The current executable is an unsigned Windows x64 build, tested on Windows 11 x64. Other Windows versions and native ARM64 execution have not been validated. The bundled runtime extracts into the temporary directory at launch and normally cleans up on exit.
@@ -105,6 +105,7 @@ Requires **Python 3.11 or later with Tkinter**. There are no third-party runtime
 ```powershell
 git clone https://github.com/SeanShaffer88/AppTrail.git
 cd AppTrail
+python -m pip install -r requirements.txt
 python -m apptrail
 ```
 
@@ -156,14 +157,24 @@ Snapshots and reports contain local paths, metadata, and potentially saved sourc
 
 Bug reports and focused improvements are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md). Include reproduction steps and capture warnings; remove private paths or data from anything you attach.
 
-AppTrail source is licensed under [MIT](LICENSE). Bundled Python and Tcl/Tk retain their own licenses; runtime notices are included in the portable release and embedded in the EXE.
+AppTrail source is licensed under [MIT](LICENSE). Bundled Python, Tcl/Tk, and Pygments retain their own licenses; runtime notices are included in the portable release and embedded in the EXE.
 
 ## Technical references
 
-AppTrail uses Python's standard library: Tkinter, hashlib, JSON, mmap, and ctypes. PE structures follow [Microsoft's PE specification](https://learn.microsoft.com/en-us/windows/win32/debug/pe-format). Packaging uses [PyInstaller](https://pyinstaller.org/en/stable/usage.html).
+AppTrail uses [Pygments 2.21.0](https://pygments.org/) (BSD-2-Clause) for offline syntax highlighting and Python's standard library: Tkinter, hashlib, JSON, mmap, and ctypes. PE structures follow [Microsoft's PE specification](https://learn.microsoft.com/en-us/windows/win32/debug/pe-format). Packaging uses [PyInstaller](https://pyinstaller.org/en/stable/usage.html).
 
 ### Review changes side by side
 
 Double-click a changed source/config file to open the default **Side by side** tab. Before and After show original line numbers, aligned blank spacer rows, and synchronized vertical scrolling. Use **Previous change** / **Next change** or **Shift+F7** / **F7** to jump between change blocks; navigation wraps at either end. Each pane has its own horizontal scrollbar. The **Text diff** tab retains the unified view, and the line-ending toggle works in both views. Encoding-only changes are explained in the capture summaries.
 
 ![Side-by-side text diff with line numbers](docs/screenshots/side-by-side.jpg)
+
+### Terminal theme and syntax highlighting
+
+AppTrail starts with a Terminal-inspired dark palette. Use **Terminal dark theme** at the top right to switch between dark and light; your choice is saved locally in the history library’s preferences.json. Open diff and notes windows update immediately. Native Windows title bars and system file dialogs follow Windows appearance.
+
+The side-by-side view colors keywords, comments, strings, numbers, functions, and types while retaining diff backgrounds, line numbers, line-ending markers, and navigation. Highlighting uses only saved text, handles multiline strings/comments, and never executes reviewed code. Supported formats include Python, JS/TS, JSON, YAML, TOML, INI, XML, HTML/CSS, C/C++, C#, Rust, Go, Java, shell/PowerShell, SQL, Markdown, Dockerfile, and Makefile. Other formats remain readable plain text.
+
+![Terminal dark theme with syntax-highlighted source diff](docs/screenshots/terminal-syntax.jpg)
+
+![Terminal dark application theme and appearance toggle](docs/screenshots/terminal-theme.jpg)

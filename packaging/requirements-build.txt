@@ -1,4 +1,5 @@
-# Build tooling only; the application has no pip runtime dependencies.
+# Pinned build tooling and application runtime dependency.
+-r ../requirements.txt
 pyinstaller==6.22.3
 pyinstaller-hooks-contrib==2026.9
 altgraph==0.17.5
