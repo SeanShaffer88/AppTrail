@@ -31,7 +31,7 @@ The text diff screenshot shows AppTrail 0.4.0; history/editor show 0.3.0, and th
 ## Download and run
 
 1. Open the [latest release](https://github.com/SeanShaffer88/AppTrail/releases/latest).
-2. Download **AppTrail-0.4.0-Windows-x64.zip**, extract it, and double-click **AppTrail.exe**. A direct EXE download is also available.
+2. Download **AppTrail-0.5.0-Windows-x64.zip**, extract it, and double-click **AppTrail.exe**. A direct EXE download is also available.
 3. No Python installation, command window, administrator access, or account is required. Keep the license notices with copies you redistribute.
 
 The current executable is an unsigned Windows x64 build, tested on Windows 11 x64. Other Windows versions and native ARM64 execution have not been validated. The bundled runtime extracts into the temporary directory at launch and normally cleans up on exit.
@@ -161,3 +161,9 @@ AppTrail source is licensed under [MIT](LICENSE). Bundled Python and Tcl/Tk reta
 ## Technical references
 
 AppTrail uses Python's standard library: Tkinter, hashlib, JSON, mmap, and ctypes. PE structures follow [Microsoft's PE specification](https://learn.microsoft.com/en-us/windows/win32/debug/pe-format). Packaging uses [PyInstaller](https://pyinstaller.org/en/stable/usage.html).
+
+### Review changes side by side
+
+Double-click a changed source/config file to open the default **Side by side** tab. Before and After show original line numbers, aligned blank spacer rows, and synchronized vertical scrolling. Use **Previous change** / **Next change** or **Shift+F7** / **F7** to jump between change blocks; navigation wraps at either end. Each pane has its own horizontal scrollbar. The **Text diff** tab retains the unified view, and the line-ending toggle works in both views. Encoding-only changes are explained in the capture summaries.
+
+![Side-by-side text diff with line numbers](docs/screenshots/side-by-side.jpg)

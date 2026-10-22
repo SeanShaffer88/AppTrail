@@ -1,4 +1,4 @@
-AppTrail 0.4.0 — Windows x64 portable edition
+AppTrail 0.5.0 — Windows x64 portable edition
 
 Source and updates: https://github.com/SeanShaffer88/AppTrail
 AppTrail source is MIT licensed. See licenses/AppTrail-MIT.txt.

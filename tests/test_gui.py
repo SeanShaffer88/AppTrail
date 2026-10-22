@@ -160,6 +160,36 @@ class HistoryGuiTests(unittest.TestCase):
         self.assertFalse(snapshot['text_capture']['enabled'])
         self.assertIsNone(snapshot['files'][0]['text'])
 
+    def test_side_diff_navigation_numbers_and_synchronized_scrolling(self):
+        from apptrail.gui import TextDiffWindow
+        from tests.test_side_diff import change
+        before = [f'line {i}\n' for i in range(100)]
+        after = list(before)
+        after[3] = 'first edit\n'
+        after[80] = 'second edit\n'
+        window = TextDiffWindow(self.root, change(''.join(before), ''.join(after)))
+        try:
+            self.root.update()
+            self.assertEqual(window.tabs.index(window.tabs.select()), 0)
+            self.assertIn('   4 │ first edit', window.side_texts[1].get('1.0', 'end'))
+            window.jump_change(1)
+            self.assertEqual(window.position.get(), 'Change 1 of 2')
+            window.jump_change(1)
+            self.assertEqual(window.position.get(), 'Change 2 of 2')
+            self.assertEqual(str(window.side_texts[0].tag_ranges('current')[0]), '81.0')
+            self.root.update()
+            self.assertAlmostEqual(window.side_texts[0].yview()[0], window.side_texts[1].yview()[0], places=3)
+            window.jump_change(1)
+            self.assertEqual(window.position.get(), 'Change 1 of 2')
+            window.jump_change(-1)
+            self.assertEqual(window.position.get(), 'Change 2 of 2')
+            window.show_endings.set(True)
+            window.refresh_diff()
+            self.assertIn('⟦LF⟧', window.side_texts[1].get('1.0', 'end'))
+            self.assertEqual(window.position.get(), 'Change 2 of 2')
+        finally:
+            window.destroy()
+
 
 if __name__ == '__main__':
     unittest.main()

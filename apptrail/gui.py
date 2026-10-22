@@ -9,7 +9,7 @@ import webbrowser
 from .core import snapshot_folder, save_snapshot, compare
 from .report import export_report
 from .history import SnapshotHistory
-from .textdiff import build_diff, diff_text
+from .textdiff import build_diff, diff_text, side_by_side, side_line
 
 
 class AppTrail:
@@ -534,6 +534,8 @@ class TextDiffWindow(tk.Toplevel):
         self.geometry('1000x720')
         self.minsize(720, 500)
         self.model = build_diff(change)
+        self.aligned = side_by_side(change)
+        self.change_index = -1
         frame = ttk.Frame(self, padding=16)
         frame.pack(fill='both', expand=True)
         ttk.Label(frame, text=f'{change["status"]} · {change["path"]}', font=('Segoe UI', 14, 'bold'), wraplength=950).pack(anchor='w')
@@ -545,6 +547,39 @@ class TextDiffWindow(tk.Toplevel):
                         variable=self.show_endings, command=self.refresh_diff).pack(anchor='w', pady=(0, 8))
         self.tabs = ttk.Notebook(frame)
         self.tabs.pack(fill='both', expand=True)
+        side_frame = ttk.Frame(self.tabs)
+        self.tabs.add(side_frame, text='Side by side')
+        toolbar = ttk.Frame(side_frame)
+        toolbar.pack(fill='x', pady=(0, 6))
+        self.previous_button = ttk.Button(toolbar, text='◀ Previous change', command=lambda: self.jump_change(-1))
+        self.previous_button.pack(side='left')
+        self.next_button = ttk.Button(toolbar, text='Next change ▶', command=lambda: self.jump_change(1))
+        self.next_button.pack(side='left', padx=8)
+        self.position = tk.StringVar(value=f'{len(self.aligned["changes"])} change(s)')
+        ttk.Label(toolbar, textvariable=self.position).pack(side='left')
+        panes = ttk.Frame(side_frame)
+        panes.pack(fill='both', expand=True)
+        self.side_texts = []
+        for column, label in enumerate(('Before', 'After')):
+            ttk.Label(panes, text=label, font=('Segoe UI', 10, 'bold')).grid(row=0, column=column, sticky='w')
+            widget = tk.Text(panes, wrap='none', height=14, width=30, font=('Consolas', 10),
+                             padx=6, pady=12, background='white', foreground='#17263b', exportselection=False)
+            widget.grid(row=1, column=column, sticky='nsew')
+            scroll = ttk.Scrollbar(panes, orient='horizontal', command=widget.xview)
+            scroll.grid(row=2, column=column, sticky='ew')
+            widget.configure(xscrollcommand=scroll.set)
+            widget.tag_configure('changed', background='#ffeef0' if column == 0 else '#e6ffed')
+            widget.tag_configure('spacer', background='#eef1f5')
+            widget.tag_configure('current', borderwidth=1, relief='solid')
+            self.side_texts.append(widget)
+            panes.columnconfigure(column, weight=1, uniform='diff')
+        self.side_scroll = ttk.Scrollbar(panes, orient='vertical', command=self.scroll_sides)
+        self.side_scroll.grid(row=1, column=2, sticky='ns')
+        panes.rowconfigure(1, weight=1)
+        for widget in self.side_texts:
+            widget.configure(yscrollcommand=lambda first, last, source=widget: self.sync_sides(source, first, last))
+        self.bind('<F7>', lambda event: self.jump_change(1))
+        self.bind('<Shift-F7>', lambda event: self.jump_change(-1))
         diff_frame = ttk.Frame(self.tabs)
         metadata_frame = ttk.Frame(self.tabs)
         self.tabs.add(diff_frame, text='Text diff')
@@ -575,11 +610,58 @@ class TextDiffWindow(tk.Toplevel):
         details.pack(fill='both', expand=True)
         details.insert('1.0', json.dumps(metadata, indent=2, ensure_ascii=False))
         details.configure(state='disabled')
-        ttk.Label(frame, text='Saved evidence only · green = added, red = removed · line numbers are in @@ hunk headers',
+        ttk.Label(frame, text='Saved evidence only · green = added, red = removed · F7 / Shift+F7 jump between changes',
                   style='Subtitle.TLabel', wraplength=950).pack(before=self.tabs, side='bottom', anchor='w', pady=(8, 0))
         self.refresh_diff()
 
+    def scroll_sides(self, *args):
+        for widget in self.side_texts:
+            widget.yview(*args)
+
+    def sync_sides(self, source, first, last):
+        if getattr(self, '_syncing', False):
+            return
+        self._syncing = True
+        try:
+            self.side_scroll.set(first, last)
+            for widget in self.side_texts:
+                if widget is not source and abs(widget.yview()[0] - float(first)) > .00001:
+                    widget.yview_moveto(first)
+        finally:
+            self._syncing = False
+
+    def jump_change(self, direction):
+        changes = self.aligned['changes']
+        if not changes:
+            return
+        if self.change_index < 0:
+            self.change_index = 0 if direction > 0 else len(changes) - 1
+        else:
+            self.change_index = (self.change_index + direction) % len(changes)
+        row = changes[self.change_index]
+        self.tabs.select(0)
+        for widget in self.side_texts:
+            widget.tag_remove('current', '1.0', 'end')
+            widget.tag_add('current', f'{row}.0', f'{row}.end')
+            widget.yview(f'{max(1, row - 3)}.0')
+        self.position.set(f'Change {self.change_index + 1} of {len(changes)}')
+
     def refresh_diff(self):
+        for side, widget in zip(('before', 'after'), self.side_texts):
+            widget.configure(state='normal')
+            widget.delete('1.0', 'end')
+            if not self.aligned['rows']:
+                widget.insert('1.0', self.model['message'])
+            for row in self.aligned['rows']:
+                tag = 'spacer' if row[side] is None else 'changed' if row['kind'] != 'equal' else 'context'
+                widget.insert('end', side_line(row[side + '_number'], row[side], self.show_endings.get()), (tag,))
+            widget.configure(state='disabled')
+        state = 'normal' if self.aligned['changes'] else 'disabled'
+        self.previous_button.configure(state=state)
+        self.next_button.configure(state=state)
+        if self.change_index >= 0:
+            self.change_index -= 1
+            self.jump_change(1)
         self.text.configure(state='normal')
         self.text.delete('1.0', 'end')
         if not self.model['lines']:

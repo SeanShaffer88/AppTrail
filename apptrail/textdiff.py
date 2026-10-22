@@ -161,3 +161,33 @@ def diff_text(model, show_endings=False):
         else:
             output.append(text.rstrip('\r\n') + '\n')
     return ''.join(output)
+
+
+def side_by_side(change):
+    """Align saved lines, preserving real line numbers and blank spacer rows."""
+    if build_diff(change)['state'] != 'available':
+        return {'rows': [], 'changes': []}
+    def lines(entry):
+        content = entry['text']['content'] if entry else ''
+        return (content[1:] if content.startswith('\ufeff') else content).splitlines(keepends=True)
+    before, after = lines(change.get('before')), lines(change.get('after'))
+    rows, changes = [], []
+    for kind, a, b, c, d in difflib.SequenceMatcher(None, before, after, autojunk=False).get_opcodes():
+        if kind != 'equal':
+            changes.append(len(rows) + 1)
+        for offset in range(max(b - a, d - c)):
+            left, right = a + offset, c + offset
+            rows.append({'before_number': left + 1 if left < b else None,
+                         'after_number': right + 1 if right < d else None,
+                         'before': before[left] if left < b else None,
+                         'after': after[right] if right < d else None,
+                         'kind': kind})
+    return {'rows': rows, 'changes': changes}
+
+
+def side_line(number, content, show_endings=False):
+    if content is None:
+        return '\n'
+    ending = 'CRLF' if content.endswith('\r\n') else 'LF' if content.endswith('\n') else 'CR' if content.endswith('\r') else 'no final newline'
+    marker = f'  ⟦{ending}⟧' if show_endings else ''
+    return f'{number:>4} │ {content.rstrip(chr(13) + chr(10))}{marker}\n'

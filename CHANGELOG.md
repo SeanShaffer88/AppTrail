@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0 — 2026-10-21
+
+- Default side-by-side saved-text diff with original line numbers, aligned spacer rows, red/green highlights, and synchronized vertical scrolling.
+- Previous/Next change buttons and Shift+F7/F7 shortcuts, with change position and wraparound navigation.
+- Unified view, metadata, and line-ending markers remain available. No snapshot schema change.
+
 ## 0.4.0 — 2026-10-21
 
 - Save bounded source/config text with new snapshots and show color-coded unified diffs in file details.
