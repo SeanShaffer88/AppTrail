@@ -77,6 +77,61 @@ class HistoryGuiTests(unittest.TestCase):
         self.finish_job()
         self.assertEqual(self.app.comparison['counts']['Modified'], 1)
 
+    def test_editor_saves_name_notes_and_searches_them(self):
+        self.app.history_tree.selection_set(self.old_id)
+        editor = self.app.edit_history()
+        editor.name.set('Release candidate')
+        editor.notes.insert('1.0', 'Commit abc123\nTests passed')
+        editor.save()
+        self.assertEqual(self.history.get(self.old_id)['label'], 'Release candidate')
+        self.app.history_filter.set('abc123')
+        self.assertEqual(self.app.history_tree.get_children(), (self.old_id,))
+
+    def test_trash_and_restore_clear_comparison_inputs(self):
+        self.app.history_tree.selection_set([self.old_id, self.new_id])
+        self.app.compare_history()
+        self.finish_job()
+        self.app.history_tree.selection_set(self.old_id)
+        with patch('apptrail.gui.messagebox.askyesno', return_value=True):
+            self.app.trash_history()
+        self.assertIsNone(self.app.comparison)
+        self.assertEqual(self.app.before.get(), '')
+        self.assertNotIn(self.old_id, self.app.history_tree.get_children())
+        self.app.show_trash.set(True)
+        self.app.refresh_history()
+        self.app.history_tree.selection_set(self.old_id)
+        self.app.restore_history()
+        self.app.show_trash.set(False)
+        self.app.refresh_history()
+        self.assertIn(self.old_id, self.app.history_tree.get_children())
+
+    def test_delete_confirmation_can_be_cancelled(self):
+        self.app.history_tree.selection_set(self.old_id)
+        with patch('apptrail.gui.messagebox.askyesno', return_value=False):
+            self.app.trash_history()
+        self.assertEqual(len(self.history.entries()), 2)
+
+    def test_baseline_comparison_includes_names_and_notes(self):
+        self.history.update_metadata(self.old_id, 'Known good', 'Commit abc123')
+        self.app.history_tree.selection_set(self.old_id)
+        self.app.mark_baseline()
+        self.app.history_tree.selection_set(self.new_id)
+        self.app.compare_baseline()
+        self.finish_job()
+        self.assertEqual(self.app.comparison['counts']['Modified'], 1)
+        self.assertEqual(self.app.comparison['context']['before']['label'], 'Known good')
+        self.assertEqual(self.app.comparison['context']['before']['notes'], 'Commit abc123')
+
+    def test_permanent_delete_requires_trash_view_and_confirmation(self):
+        self.history.trash([self.old_id])
+        self.app.show_trash.set(True)
+        self.app.refresh_history()
+        self.app.history_tree.selection_set(self.old_id)
+        with patch('apptrail.gui.messagebox.askyesno', return_value=True):
+            self.app.purge_history()
+        self.assertFalse(self.history.path(self.old_id).exists())
+        self.assertEqual(self.history.entries(deleted=True), [])
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -6,7 +6,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import webbrowser
 
-from .core import snapshot_folder, save_snapshot, load_snapshot, compare
+from .core import snapshot_folder, save_snapshot, compare
 from .report import export_report
 from .history import SnapshotHistory
 
@@ -86,13 +86,13 @@ class AppTrail:
         self.tree.bind('<Double-1>', self.details)
         ttk.Label(comparison_frame, text='Double-click a file for hashes and metadata. Warnings and full evidence are included in the report.', style='Subtitle.TLabel').pack(anchor='w', pady=8)
         bottom = ttk.Frame(frame)
-        bottom.pack(fill='x')
+        bottom.pack(before=self.tabs, side='bottom', fill='x')
         self.status = tk.StringVar(value='Ready · Files stay on this computer')
         ttk.Label(bottom, textvariable=self.status, wraplength=930).pack(side='left', fill='x', expand=True)
         self.cancel_button = ttk.Button(bottom, text='Cancel capture', command=self.stop.set, state='disabled')
         self.cancel_button.pack(side='right')
         self.progress = ttk.Progressbar(frame, mode='indeterminate')
-        self.progress.pack(fill='x', pady=(8, 0))
+        self.progress.pack(before=bottom, side='bottom', fill='x', pady=(8, 0))
         root.protocol('WM_DELETE_WINDOW', self.close)
         self.refresh_history()
         self.poll_id = root.after(100, self.poll)
@@ -113,9 +113,11 @@ class AppTrail:
             f'Your snapshots and catalog are stored in:\n\n{self.history.directory}\n\nThis library stays available when you update or move AppTrail.')).pack(side='left', padx=4)
         table = ttk.Frame(frame)
         table.pack(fill='both', expand=True)
+        self.show_trash = tk.BooleanVar(value=False)
+        ttk.Checkbutton(toolbar, text='Show Trash', variable=self.show_trash, command=self.refresh_history).pack(side='left', padx=8)
         self.history_tree = ttk.Treeview(table, columns=('label', 'date', 'root', 'files', 'issues'),
-                                        show='headings', selectmode='extended', height=8)
-        for key, label, width in (('label', 'Application', 160), ('date', 'Captured (local time)', 170),
+                                        show='headings', selectmode='extended', height=5)
+        for key, label, width in (('label', 'Snapshot name', 200), ('date', 'Captured (local time)', 170),
                                   ('root', 'Application folder', 430), ('files', 'Files', 65), ('issues', 'Issues / state', 110)):
             self.history_tree.heading(key, text=label)
             self.history_tree.column(key, width=width, minwidth=60)
@@ -127,11 +129,25 @@ class AppTrail:
         horizontal.grid(row=1, column=0, sticky='ew')
         table.rowconfigure(0, weight=1)
         table.columnconfigure(0, weight=1)
+        self.history_tree.bind('<<TreeviewSelect>>', self.history_selection_changed)
+        self.history_tree.bind('<Double-1>', lambda event: self.edit_history())
+        self.history_tree.bind('<Control-a>', self.select_all_history)
+        self.history_tree.bind('<Control-A>', self.select_all_history)
         actions = ttk.Frame(frame)
         actions.pack(fill='x', pady=12)
         self.button(actions, 'Compare selected (2)', self.compare_history).pack(side='left')
         self.button(actions, 'Use as Before', lambda: self.use_history(self.before)).pack(side='left', padx=8)
         self.button(actions, 'Use as After', lambda: self.use_history(self.after)).pack(side='left')
+        self.button(actions, 'Mark as baseline', self.mark_baseline).pack(side='left', padx=8)
+        self.button(actions, 'Compare with baseline', self.compare_baseline).pack(side='left')
+        organize = ttk.Frame(frame)
+        organize.pack(fill='x', pady=(0, 8))
+        self.button(organize, 'Edit name & notes…', self.edit_history).pack(side='left')
+        self.button(organize, 'Move to Trash…', self.trash_history).pack(side='left', padx=8)
+        self.button(organize, 'Restore selected', self.restore_history).pack(side='left')
+        self.button(organize, 'Delete permanently…', self.purge_history).pack(side='left', padx=8)
+        self.selection_info = tk.StringVar(value='Select a snapshot to see its notes. Double-click to edit.')
+        ttk.Label(frame, textvariable=self.selection_info, style='Subtitle.TLabel', wraplength=1020).pack(anchor='w', pady=(0, 8))
         self.history_summary = tk.StringVar()
         ttk.Label(frame, textvariable=self.history_summary, style='Subtitle.TLabel', wraplength=1020).pack(anchor='w')
         ttk.Label(frame, text='Use Ctrl-click or Shift-click to select two snapshots. Import keeps a local copy, so moving the original JSON will not break history.',
@@ -143,7 +159,7 @@ class AppTrail:
         from datetime import datetime
         selected = self.history_tree.selection()
         try:
-            entries = self.history.entries(self.history_filter.get())
+            entries = self.history.entries(self.history_filter.get(), deleted=self.show_trash.get())
         except (OSError, ValueError, sqlite3.Error) as exc:
             self.history_summary.set(f'Could not load history: {exc}')
             return
@@ -151,10 +167,133 @@ class AppTrail:
         self.history_tree.delete(*self.history_tree.get_children())
         for entry in entries:
             date = datetime.fromtimestamp(entry['captured_ts']).astimezone().strftime('%Y-%m-%d %H:%M:%S')
-            self.history_tree.insert('', 'end', iid=entry['id'], values=(entry['label'], date, entry['root'],
+            self.history_tree.insert('', 'end', iid=entry['id'], values=(('★ ' if entry['baseline'] else '') + entry['label'], date, entry['root'],
                 entry['file_count'], entry['issues'] if entry['available'] else 'Missing JSON'))
         self.history_tree.selection_set([identity for identity in selected if identity in self.history_entries])
-        self.history_summary.set(f'{len(entries)} snapshot(s) · Stored locally and available after restart')
+        self.history_summary.set(f'{len(entries)} snapshot(s) in {"Trash" if self.show_trash.get() else "history"} · Stored locally and available after restart')
+        self.history_selection_changed()
+
+    def select_all_history(self, event=None):
+        self.history_tree.selection_set(self.history_tree.get_children())
+        return 'break'
+
+    def history_selection_changed(self, event=None):
+        selected = self.history_tree.selection()
+        if len(selected) == 1 and selected[0] in self.history_entries:
+            entry = self.history_entries[selected[0]]
+            note = ' '.join(entry['notes'].split()) or 'No notes yet.'
+            self.selection_info.set(f'{entry["label"]} · {note[:180]}' + ('…' if len(note) > 180 else ''))
+        elif len(selected) > 1:
+            self.selection_info.set(f'{len(selected)} snapshots selected')
+        else:
+            self.selection_info.set('Select a snapshot to see its notes. Double-click to edit.')
+
+    def selected_history(self, single=False, trash=False):
+        if self.busy:
+            return ()
+        selected = self.history_tree.selection()
+        if self.show_trash.get() != trash:
+            messagebox.showinfo('Choose a history view', 'Turn on Show Trash first.' if trash else 'Turn off Show Trash to use active snapshots.')
+            return ()
+        if not selected or (single and len(selected) != 1):
+            messagebox.showinfo('Choose snapshots', 'Select one snapshot.' if single else 'Select at least one snapshot.')
+            return ()
+        return selected
+
+    def edit_history(self):
+        selected = self.selected_history(single=True)
+        if not selected:
+            return
+        try:
+            entry = self.history.get(selected[0])
+        except (ValueError, sqlite3.Error) as exc:
+            messagebox.showerror('Snapshot unavailable', str(exc))
+            return
+        return SnapshotEditor(self.root, self.history, entry, self.metadata_saved)
+
+    def metadata_saved(self, identity):
+        self.refresh_history()
+        if identity in self.history_entries:
+            self.history_tree.selection_set(identity)
+            self.history_tree.see(identity)
+        if self.comparison:
+            self.comparison['context'] = self.history.comparison_context(self.comparison_paths)
+        self.status.set('Snapshot name and notes saved. Captured evidence is unchanged.')
+
+    def mark_baseline(self):
+        selected = self.selected_history(single=True)
+        if not selected:
+            return
+        try:
+            self.history.set_baseline(selected[0])
+            self.refresh_history()
+            if self.comparison:
+                self.comparison['context'] = self.history.comparison_context(self.comparison_paths)
+            self.status.set('Baseline set for this application folder. Select another capture to compare against it.')
+        except (OSError, ValueError, sqlite3.Error) as exc:
+            messagebox.showerror('Cannot set baseline', str(exc))
+
+    def compare_baseline(self):
+        selected = self.selected_history(single=True)
+        if not selected:
+            return
+        def job():
+            pair = self.history.baseline_pair(selected[0])
+            paths = tuple(str(self.history.path(identity)) for identity, _ in pair)
+            comparison = compare(pair[0][1], pair[1][1])
+            comparison['context'] = self.history.comparison_context(paths)
+            return ('comparison', comparison, paths)
+        self.status.set('Comparing with the baseline…')
+        self.run_job(job)
+
+    def clear_deleted_comparison(self, selected):
+        paths = {self.history.path(identity) for identity in selected}
+        for variable in (self.before, self.after):
+            if variable.get() and Path(variable.get()).resolve() in paths:
+                variable.set('')
+        if any(Path(path).resolve() in paths for path in self.comparison_paths):
+            self.comparison = None
+            self.comparison_paths = ()
+            self.tree.delete(*self.tree.get_children())
+            self.summary.set('A comparison input moved to Trash. Restore it or choose another snapshot.')
+
+    def trash_history(self):
+        selected = self.selected_history()
+        if not selected:
+            return
+        if not messagebox.askyesno('Move snapshots to Trash?', f'Move {len(selected)} snapshot(s) to Trash?\n\nYou can restore them later. Original imported JSON files are untouched.'):
+            return
+        try:
+            self.history.trash(selected)
+            self.clear_deleted_comparison(selected)
+            self.refresh_history()
+            self.status.set(f'Moved {len(selected)} snapshot(s) to Trash. Turn on Show Trash to restore them.')
+        except (OSError, ValueError, sqlite3.Error) as exc:
+            messagebox.showerror('Could not move snapshots', str(exc))
+
+    def restore_history(self):
+        selected = self.selected_history(trash=True)
+        if not selected:
+            return
+        try:
+            self.history.restore(selected)
+            self.refresh_history()
+            self.status.set(f'Restored {len(selected)} snapshot(s). Turn off Show Trash to see them.')
+        except (OSError, ValueError, sqlite3.Error) as exc:
+            messagebox.showerror('Could not restore snapshots', str(exc))
+
+    def purge_history(self):
+        selected = self.selected_history(trash=True)
+        if not selected:
+            return
+        if not messagebox.askyesno('Permanently delete snapshots?', f'Permanently delete {len(selected)} trashed snapshot(s) and their notes?\n\nThis removes the library copies and cannot be undone. Original imported JSON files are untouched.', icon='warning', default='no'):
+            return
+        try:
+            self.history.purge(selected)
+            self.refresh_history()
+            self.status.set(f'Permanently deleted {len(selected)} library snapshot(s).')
+        except (OSError, ValueError, sqlite3.Error) as exc:
+            messagebox.showerror('Could not permanently delete snapshots', str(exc))
 
     def import_history(self):
         paths = filedialog.askopenfilenames(title='Import saved snapshots into history', filetypes=[('AppTrail JSON', '*.json')])
@@ -196,7 +335,9 @@ class AppTrail:
         def job():
             pair = self.history.compare_pair(selected)
             paths = tuple(str(self.history.path(identity)) for identity, _ in pair)
-            return ('comparison', compare(pair[0][1], pair[1][1]), paths)
+            comparison = compare(pair[0][1], pair[1][1])
+            comparison['context'] = self.history.comparison_context(paths)
+            return ('comparison', comparison, paths)
         self.status.set('Comparing snapshots from history…')
         self.run_job(job)
 
@@ -274,7 +415,11 @@ class AppTrail:
         if not before or not after:
             messagebox.showerror('Choose snapshots', 'Choose both the before and after snapshot.')
             return
-        self.run_job(lambda: ('comparison', compare(self.history.load_path(before), self.history.load_path(after)), (before, after)))
+        def job():
+            comparison = compare(self.history.load_path(before), self.history.load_path(after))
+            comparison['context'] = self.history.comparison_context((before, after))
+            return ('comparison', comparison, (before, after))
+        self.run_job(job)
 
     def poll(self):
         latest = None
@@ -291,6 +436,7 @@ class AppTrail:
             self.cancel_button.configure(state='disabled')
             for button in self.buttons:
                 button.configure(state='normal')
+            self.refresh_history()
             latest = None
             if kind == 'error':
                 self.status.set('Operation stopped')
@@ -303,6 +449,7 @@ class AppTrail:
                     self.after.set(output)
                 count = len(snapshot['warnings']) + sum(bool(e.get('error')) for e in snapshot['files'])
                 self.history_filter.set('')
+                self.show_trash.set(False)
                 self.refresh_history()
                 self.history_tree.selection_set(identity)
                 self.history_tree.see(identity)
@@ -311,6 +458,7 @@ class AppTrail:
             elif payload[0] == 'imported':
                 _, identities, errors = payload
                 self.history_filter.set('')
+                self.show_trash.set(False)
                 self.refresh_history()
                 self.history_tree.selection_set(list(dict.fromkeys(identities)))
                 self.status.set(f'Imported {len(identities)} snapshot(s) · {len(errors)} failed')
@@ -379,6 +527,46 @@ class AppTrail:
             self.stop.set()
         self.root.after_cancel(self.poll_id)
         self.root.destroy()
+
+
+class SnapshotEditor(tk.Toplevel):
+    def __init__(self, parent, history, entry, on_saved):
+        super().__init__(parent)
+        self.history, self.identity, self.on_saved = history, entry['id'], on_saved
+        self.title('Edit snapshot name and notes')
+        self.geometry('640x440')
+        self.minsize(480, 340)
+        self.transient(parent)
+        frame = ttk.Frame(self, padding=20)
+        frame.pack(fill='both', expand=True)
+        ttk.Label(frame, text='Snapshot name (up to 120 characters)').pack(anchor='w')
+        self.name = tk.StringVar(value=entry['label'])
+        name_entry = ttk.Entry(frame, textvariable=self.name)
+        name_entry.pack(fill='x', pady=(6, 14))
+        ttk.Label(frame, text='Notes · build, commit, test result, or reason for capture').pack(anchor='w')
+        from tkinter.scrolledtext import ScrolledText
+        self.notes = ScrolledText(frame, wrap='word', height=8, font=('Segoe UI', 10))
+        self.notes.pack(fill='both', expand=True, pady=6)
+        self.notes.insert('1.0', entry['notes'])
+        ttk.Label(frame, text='Names and notes are stored separately from immutable snapshot evidence.',
+                  style='Subtitle.TLabel', wraplength=580).pack(anchor='w', pady=8)
+        buttons = ttk.Frame(frame)
+        buttons.pack(fill='x')
+        ttk.Button(buttons, text='Save changes', command=self.save).pack(side='right')
+        ttk.Button(buttons, text='Cancel', command=self.destroy).pack(side='right', padx=8)
+        self.bind('<Escape>', lambda event: self.destroy())
+        self.grab_set()
+        name_entry.focus_set()
+        name_entry.selection_range(0, 'end')
+
+    def save(self):
+        try:
+            self.history.update_metadata(self.identity, self.name.get(), self.notes.get('1.0', 'end-1c'))
+        except (OSError, ValueError, sqlite3.Error) as exc:
+            messagebox.showerror('Cannot save snapshot details', str(exc), parent=self)
+            return
+        self.on_saved(self.identity)
+        self.destroy()
 
 
 def main():

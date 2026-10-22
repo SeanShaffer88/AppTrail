@@ -6,9 +6,13 @@
 
 ## See it in action
 
-Browse saved snapshots and choose captures to compare without selecting JSON files each time.
+Browse named snapshots, inspect notes, and compare builds against a known-good baseline without selecting JSON files each time.
 
 ![AppTrail snapshot history showing saved application captures with dates, folders, file counts, and comparison controls](docs/screenshots/history.jpg)
+
+Label captures with a release name, commit ID, or test result while keeping the original evidence unchanged.
+
+![AppTrail snapshot editor with a build name and multiline development notes](docs/screenshots/snapshot-editor.jpg)
 
 Compare two snapshots to see added, removed, and modified files, with a summary of the evidence for each change.
 
@@ -18,12 +22,12 @@ Double-click a file to inspect its before-and-after hashes, sizes, timestamps, a
 
 ![AppTrail file evidence window showing different SHA-256 hashes and sizes before and after a settings file changed](docs/screenshots/file-evidence.jpg)
 
-The history screenshot shows AppTrail 0.2.0; the comparison and evidence screenshots show 0.1.0. All are unedited Windows captures using demo snapshots.
+The history and editor screenshots show AppTrail 0.3.0; the comparison and evidence screenshots show 0.1.0. All are unedited Windows captures using demo snapshots.
 
 ## Download and run
 
 1. Open the [latest release](https://github.com/SeanShaffer88/AppTrail/releases/latest).
-2. Download **AppTrail-0.2.0-Windows-x64.zip**, extract it, and double-click **AppTrail.exe**. A direct EXE download is also available.
+2. Download **AppTrail-0.3.0-Windows-x64.zip**, extract it, and double-click **AppTrail.exe**. A direct EXE download is also available.
 3. No Python installation, command window, administrator access, or account is required. Keep the license notices with copies you redistribute.
 
 The current executable is an unsigned Windows x64 build, tested on Windows 11 x64. Other Windows versions and native ARM64 execution have not been validated. The bundled runtime extracts into the temporary directory at launch and normally cleans up on exit.
@@ -47,7 +51,20 @@ Use **Import JSON…** once to add existing snapshots, including the demo pair. 
 
 **Save JSON…** exports a capture to a location you choose and also adds it to history. Manual JSON selection remains on the **Comparison** tab. Existing v1 snapshot JSON files remain compatible. The source CLI continues to save only to the path you specify; import those snapshots into the desktop history when desired.
 
-History contains local paths and metadata. Back up the entire history directory while AppTrail is closed if you want to retain the library elsewhere. No history is automatically uploaded, deleted, or synchronized.
+History contains local paths and metadata. Back up the entire history directory while AppTrail is closed if you want to retain the library elsewhere. No history is uploaded or synchronized.
+
+### Organize builds and compare against a baseline
+
+- **Edit name & notes…** (or double-click a history row): give a capture a name such as “v1.4 release candidate” and record the commit, test results, or reason for capturing it. Names and notes are searchable and appear in exported comparison reports.
+- **Mark as baseline**: designate a known-good snapshot for that application folder. Select another capture and click **Compare with baseline**. The baseline is always Before, regardless of capture date. Choosing a new baseline replaces the previous one for that folder.
+- **Move to Trash…**: hide old snapshots from active history while retaining their files and annotations. Turn on **Show Trash** to restore them.
+- **Delete permanently…**: select entries in Trash to remove their library files and notes after confirmation. This cannot be undone; original imported JSON files and external reports are untouched. AppTrail recovers interrupted deletion operations when next started.
+
+Names, notes, baseline markers, and Trash state are stored in the SQLite catalog, separately from immutable snapshot evidence. Renaming or annotating a capture never changes its SHA-256 identity. Existing v0.2 catalogs upgrade automatically. Duplicate imports preserve custom details and restore a matching trashed capture; restoring does not reinstate a previous baseline marker.
+
+The [named comparison report example](examples/Named-comparison-report.html) shows how build names, notes, and baseline context travel with exported evidence.
+
+Snapshot JSON exports contain captured evidence, not these catalog annotations. Back up the whole history directory to preserve organization; share a comparison report when you want names and notes included. Notes may contain private development details, so review reports before sharing them.
 
 ## What it captures
 

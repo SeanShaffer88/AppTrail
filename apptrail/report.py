@@ -38,9 +38,14 @@ def render_html(comparison):
         if issues:
             warnings.append(f'<h3>{label.title()} capture</h3><ul>' + ''.join(f'<li>{e(w)}</li>' for w in issues) + '</ul>')
     warning_html = '<aside><h2>Capture limitations</h2>' + ''.join(warnings) + '</aside>' if warnings else ''
-    roots = ''.join(f'<div><h2>{label.title()}</h2><p>{e(comparison[label]["root"])}</p>'
-                    f'<small>{e(comparison[label]["started_at"])} — {e(comparison[label]["completed_at"])}</small></div>'
-                    for label in ('before', 'after'))
+    roots = []
+    for label in ('before', 'after'):
+        context = comparison.get('context', {}).get(label, {})
+        name = f'<h3>{e(context["label"])}{" · Baseline" if context.get("baseline") else ""}</h3>' if context.get('label') else ''
+        notes = f'<p class="capture-note">{e(context["notes"])}</p>' if context.get('notes') else ''
+        roots.append(f'<div><h2>{label.title()}</h2>{name}<p>{e(comparison[label]["root"])}</p>'
+                     f'<small>{e(comparison[label]["started_at"])} — {e(comparison[label]["completed_at"])}</small>{notes}</div>')
+    roots = ''.join(roots)
     return f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src 'none'; base-uri 'none'; form-action 'none'">
@@ -51,7 +56,7 @@ h1{{font-size:38px;line-height:1.2;margin:12px 0}}h2{{font-size:18px}}h3{{font-s
 .muted,small{{color:#596b80}}.cards{{display:flex;flex-wrap:wrap;gap:12px;margin:28px 0}}
 .card{{flex:1;min-width:110px;background:white;border:1px solid #dce3ee;border-radius:12px;padding:16px}}
 .card strong{{display:block;font-size:30px}}.card span{{color:#596b80}}.roots,.evidence{{display:grid;grid-template-columns:1fr 1fr;gap:24px}}
-.roots{{border-top:1px solid #dce3ee;padding:12px 0 26px}}p,td,dd,li{{overflow-wrap:anywhere}}
+.roots{{border-top:1px solid #dce3ee;padding:12px 0 26px}}p,td,dd,li{{overflow-wrap:anywhere}}.capture-note{{white-space:pre-wrap;background:#eaf0fa;padding:12px;border-radius:8px}}
 table{{width:100%;border-collapse:collapse;background:white}}th,td{{text-align:left;vertical-align:top;padding:18px;border-bottom:1px solid #dce3ee}}
 th{{background:#e9eef6;font-size:13px}}td:first-child{{width:120px}}.badge{{background:#eaf0fa;border-radius:6px;padding:4px 8px;font-size:12px;font-weight:700}}
 ul{{padding-left:20px}}summary{{cursor:pointer;color:#245d9e}}dt{{font-size:12px;color:#596b80;margin-top:10px}}dd{{margin:0;font-family:Consolas,monospace;font-size:12px}}
