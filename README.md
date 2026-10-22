@@ -4,11 +4,23 @@
 
 [Download for Windows x64](https://github.com/SeanShaffer88/AppTrail/releases/latest) · [Report a bug](https://github.com/SeanShaffer88/AppTrail/issues) · [MIT license](LICENSE)
 
+## Start here
+
+| Your goal | Next step |
+| --- | --- |
+| Try the desktop app | [Download and run](#download-and-run) the Windows x64 release. |
+| Compare two builds | Follow [Capture, compare, report](#capture-compare-report). |
+| Track a project milestone | Create a [project checkpoint](#project-checkpoints), then compare it to the current folder. |
+| Inspect code changes | Use [side-by-side review](#review-changes-side-by-side), search, and offline HTML export. |
+| Run from source or automate captures | See [source setup and CLI commands](#run-from-source). |
+
+**Built for:** developers investigating an application update or reviewing changes between project checkpoints. Captures preserve hashes, selected metadata, and bounded eligible source/config text. They are sequential observations, not full backups; review exported contents before sharing.
+
 ## See it in action
 
-Inspect saved source/config changes with colored added and removed lines, encoding details, and optional line-ending markers.
+Review saved source/config changes side by side, with syntax highlighting, changed-word emphasis, and original line numbers. The detailed guide below covers search, whitespace filters, collapsed context, and offline export.
 
-![AppTrail text diff showing exact saved Python source changes with red removed lines and green added lines](docs/screenshots/text-diff.jpg)
+![AppTrail side-by-side source review with syntax highlighting, original line numbers, and changed-word emphasis](docs/screenshots/word-diff.jpg)
 
 Browse named snapshots, inspect notes, and compare builds against a known-good baseline without selecting JSON files each time.
 
@@ -26,7 +38,7 @@ Double-click a file to inspect its before-and-after hashes, sizes, timestamps, a
 
 ![AppTrail file evidence window showing different SHA-256 hashes and sizes before and after a settings file changed](docs/screenshots/file-evidence.jpg)
 
-The text diff screenshot shows AppTrail 0.4.0; history/editor show 0.3.0, and the older comparison/evidence views show 0.1.0. All are unedited Windows captures using demo snapshots.
+The screenshots show different development milestones, rather than one release: history/editor show 0.3.0, and comparison/evidence show 0.1.0. All are unedited Windows captures using demo snapshots; see the review guide below for additional feature captures.
 
 ## Download and run
 
