@@ -1,4 +1,4 @@
-AppTrail 0.10.0 — Windows x64 portable edition
+AppTrail 0.11.0 — Windows x64 portable edition
 
 Source and updates: https://github.com/SeanShaffer88/AppTrail
 AppTrail source is MIT licensed. See licenses/AppTrail-MIT.txt.
@@ -71,3 +71,5 @@ Search: Ctrl+F focuses Find in the side-by-side view. Search both saved snapshot
 Ignore whitespace-only changes: Enable in the Side by side toolbar to suppress formatting-only highlights and skip them in change navigation. Text/line numbers remain visible and searchable. This textual filter also ignores whitespace inside strings or indentation-sensitive code. Unified diffs, reports, evidence and file counts stay exact. Turn it off for exact review.
 
 Collapse unchanged lines: Enable in Side by side to keep three context rows around changes. Click an inline expand button to reveal a section in both panes. Expand all restores full code; Collapse again restores compact view. Search automatically reveals hidden matches. Original line numbers and exact evidence are preserved.
+
+Context lines: Choose 0–100 alongside Collapse unchanged lines (default 3). Arrows apply immediately; typed values apply on Enter or leaving the field. The choice is remembered for newly opened diff windows and future sessions in the history library preferences.json.

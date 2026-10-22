@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.11.0 — 2026-10-21
+
+- Context lines setting (0–100, default 3) alongside collapsed diff controls. Applies immediately and is remembered for new diff windows and future sessions.
+- Preference updates preserve theme and unrelated settings. Invalid or malformed values safely revert to defaults/previous values, and save failures are reported without losing the current view.
+
 ## 0.10.0 — 2026-10-21
 
 - Optional collapse of long unchanged sections in side-by-side diffs, keeping three context rows around changes.

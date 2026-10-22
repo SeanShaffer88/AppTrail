@@ -1,8 +1,7 @@
 """Terminal-inspired application palettes and persistent local appearance."""
-import json
 import tkinter as tk
 from tkinter import ttk
-from .core import atomic_write
+from .preferences import read_preferences, write_preference
 
 PALETTES = {
     'dark': dict(bg='#0c0c0c', panel='#202020', field='#161616', fg='#cccccc', muted='#aaaaaa',
@@ -22,10 +21,7 @@ PALETTES = {
 class Theme:
     def __init__(self, root, path):
         self.root, self.path = root, path
-        try:
-            value = json.loads(path.read_text(encoding='utf-8')).get('theme', 'dark')
-        except (OSError, ValueError, AttributeError):
-            value = 'dark'
+        value = read_preferences(path).get('theme', 'dark')
         self.mode = tk.StringVar(root, value=value if isinstance(value, str) and value in PALETTES else 'dark')
         root._apptrail_theme = self
         ttk.Style(root).theme_use('clam')
@@ -39,7 +35,7 @@ class Theme:
         self.mode.set('light' if self.mode.get() == 'dark' else 'dark')
         self.apply()
         try:
-            atomic_write(self.path, json.dumps({'theme': self.mode.get()}))
+            write_preference(self.path, 'theme', self.mode.get())
         except OSError:
             from tkinter import messagebox
             messagebox.showwarning('Appearance preference', 'Theme changed for this session, but the preference could not be saved.', parent=self.root)
@@ -56,6 +52,7 @@ class Theme:
         style.configure('TButton', background=p['panel'], padding=5)
         style.map('TButton', background=[('active', p['select']), ('pressed', p['select'])])
         style.configure('TEntry', fieldbackground=p['field'], insertcolor=p['fg'])
+        style.configure('TSpinbox', fieldbackground=p['field'], insertcolor=p['fg'], arrowcolor=p['fg'])
         style.configure('Treeview', background=p['field'], fieldbackground=p['field'], foreground=p['fg'])
         style.map('Treeview', background=[('selected', p['select'])], foreground=[('selected', p['fg'])])
         style.configure('Treeview.Heading', background=p['panel'])

@@ -423,6 +423,53 @@ class HistoryGuiTests(unittest.TestCase):
         finally:
             window.destroy()
 
+    def test_context_setting_updates_folds_and_is_remembered(self):
+        from apptrail.gui import TextDiffWindow
+        from apptrail.theme import Theme
+        from tests.test_side_diff import change
+        before = ''.join(f'line {i}\n' for i in range(40))
+        item = change(before, before.replace('line 20\n', 'changed\n'))
+        window = TextDiffWindow(self.root, item)
+        try:
+            window.collapse_all_folds()
+            self.assertEqual(window.context_count, 3)
+            window.context_value.set('0')
+            window.set_context_lines()
+            self.assertEqual(set(window.folded), {1, 22})
+            window.context_value.set('10')
+            window.set_context_lines()
+            self.assertEqual(window.folded[1][0], 11)
+            self.app.theme.toggle()
+            window.destroy()
+            # Reconstruct application preferences to model a new session.
+            restored = Theme(self.root, self.history.directory / 'preferences.json')
+            self.assertEqual(restored.mode.get(), 'light')
+            window = TextDiffWindow(self.root, item)
+            self.assertEqual(window.context_count, 10)
+            window.collapse_all_folds()
+            self.assertEqual(window.folded[1][0], 11)
+            for invalid in ('', '-1', '101', 'abc', '2.5'):
+                window.context_value.set(invalid)
+                window.set_context_lines()
+                self.assertEqual(window.context_value.get(), '10')
+        finally:
+            window.destroy()
+
+    def test_context_save_failure_keeps_window_usable(self):
+        from apptrail.gui import TextDiffWindow
+        from tests.test_side_diff import change
+        window = TextDiffWindow(self.root, change('same\n' * 20 + 'old\n', 'same\n' * 20 + 'new\n'))
+        try:
+            window.collapse_all_folds()
+            window.context_value.set('5')
+            with patch('apptrail.gui.write_preference', side_effect=OSError('read only')), patch('apptrail.gui.messagebox.showwarning') as warning:
+                window.set_context_lines()
+            self.assertEqual(window.context_count, 5)
+            warning.assert_called_once()
+            self.assertEqual(window.folded[1][0], 16)
+        finally:
+            window.destroy()
+
     def test_side_diff_navigation_numbers_and_synchronized_scrolling(self):
         from apptrail.gui import TextDiffWindow
         from tests.test_side_diff import change

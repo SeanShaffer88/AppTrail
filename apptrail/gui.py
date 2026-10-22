@@ -14,6 +14,7 @@ from .syntax import highlight_lines
 from .theme import Theme
 from .search import find_matches
 from .folding import unchanged_ranges
+from .preferences import read_preferences, write_preference, context_lines, MAX_CONTEXT_LINES
 
 
 class AppTrail:
@@ -556,6 +557,10 @@ class TextDiffWindow(tk.Toplevel):
         self.folded = {}
         self.expanded_folds = set()
         self.collapse_unchanged = tk.BooleanVar(value=False)
+        theme = getattr(parent, '_apptrail_theme', None)
+        self.preference_path = theme.path if theme else None
+        self.context_count = context_lines(read_preferences(self.preference_path))
+        self.context_value = tk.StringVar(value=str(self.context_count))
         frame = ttk.Frame(self, padding=16)
         frame.pack(fill='both', expand=True)
         ttk.Label(frame, text=f'{change["status"]} · {change["path"]}', font=('Segoe UI', 14, 'bold'), wraplength=950).pack(anchor='w')
@@ -589,8 +594,14 @@ class TextDiffWindow(tk.Toplevel):
         ttk.Label(side_frame, textvariable=self.whitespace_status, style='Subtitle.TLabel').pack(anchor='w')
         foldbar = ttk.Frame(side_frame)
         foldbar.pack(fill='x', pady=(0, 6))
-        ttk.Checkbutton(foldbar, text='Collapse unchanged lines · 3 context lines', variable=self.collapse_unchanged,
+        ttk.Checkbutton(foldbar, text='Collapse unchanged lines', variable=self.collapse_unchanged,
                         command=self.reset_folds).pack(side='left')
+        ttk.Label(foldbar, text='Context lines:').pack(side='left', padx=(12, 4))
+        self.context_spin = ttk.Spinbox(foldbar, from_=0, to=MAX_CONTEXT_LINES, width=4,
+                                       textvariable=self.context_value, command=self.set_context_lines)
+        self.context_spin.pack(side='left')
+        self.context_spin.bind('<Return>', self.set_context_lines)
+        self.context_spin.bind('<FocusOut>', self.set_context_lines)
         ttk.Button(foldbar, text='Expand all', command=self.expand_all_folds).pack(side='left', padx=8)
         ttk.Button(foldbar, text='Collapse again', command=self.collapse_all_folds).pack(side='left')
         searchbar = ttk.Frame(side_frame)
@@ -811,7 +822,7 @@ class TextDiffWindow(tk.Toplevel):
     def apply_folds(self):
         if not self.collapse_unchanged.get():
             return
-        for start, end in unchanged_ranges(self.aligned['rows']):
+        for start, end in unchanged_ranges(self.aligned['rows'], self.context_count):
             if (start, end) in self.expanded_folds:
                 continue
             buttons = []
@@ -834,6 +845,26 @@ class TextDiffWindow(tk.Toplevel):
     def reset_folds(self):
         self.expanded_folds.clear()
         self.refresh_diff()
+
+    def set_context_lines(self, event=None):
+        try:
+            value = int(self.context_value.get())
+            if not 0 <= value <= MAX_CONTEXT_LINES:
+                raise ValueError
+        except ValueError:
+            self.context_value.set(str(self.context_count))
+            self.bell()
+            return 'break'
+        self.context_value.set(str(value))
+        if value != self.context_count:
+            self.context_count = value
+            self.reset_folds()
+            if self.preference_path is not None:
+                try:
+                    write_preference(self.preference_path, 'context_lines', value)
+                except OSError:
+                    messagebox.showwarning('Context preference', 'Context lines changed for this window, but the preference could not be saved.', parent=self)
+        return 'break'
 
     def collapse_all_folds(self):
         self.collapse_unchanged.set(True)
