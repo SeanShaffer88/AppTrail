@@ -4,6 +4,10 @@
 
 [Download for Windows x64](https://github.com/SeanShaffer88/AppTrail/releases/latest) · [Report a bug](https://github.com/SeanShaffer88/AppTrail/issues) · [MIT license](LICENSE)
 
+## TL;DR
+
+AppTrail shows what changed in a Windows application folder. Capture a snapshot of a folder, capture it again after an update, and AppTrail compares the two: added, removed and modified files with SHA-256 evidence, before-and-after views of saved source and config text, and a standalone HTML report you can keep or share. It is a portable Windows x64 app - no install, no account, no telemetry - and free under the MIT license. Download the latest release, run AppTrail.exe, and capture your first baseline.
+
 ## Start here
 
 | Your goal | Next step |
