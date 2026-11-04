@@ -169,7 +169,9 @@ def load_snapshot(path):
         if git.get('status') not in ('available', 'unavailable'):
             raise ValueError('Invalid checkpoint Git status.')
         if git['status'] == 'available':
-            if any(not isinstance(git.get(k), str) for k in ('repository', 'commit', 'branch', 'subject', 'author', 'committed_at')) or type(git.get('dirty')) is not bool:
+            if any(not isinstance(git.get(k), str) for k in ('repository', 'commit', 'branch', 'subject', 'author', 'committed_at')) or not (type(git.get('dirty')) is bool or ('dirty' in git and git['dirty'] is None
+                    and isinstance(git.get('dirty_reason'), str) and git['dirty_reason'].strip()
+                    and len(git['dirty_reason']) <= 500)):
                 raise ValueError('Invalid checkpoint Git details.')
         elif not isinstance(git.get('message'), str):
             raise ValueError('Invalid checkpoint Git message.')
