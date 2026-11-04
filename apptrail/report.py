@@ -61,7 +61,9 @@ def render_html(comparison):
         if checkpoint:
             git = checkpoint['git']
             details = (f"{git['commit']} · {git['branch']} · {git['subject']} · {git['author']} · {git['committed_at']} · "
-                       + ('uncommitted changes present' if git['dirty'] else 'clean working tree')
+                       + ('uncommitted changes present' if git['dirty'] is True else
+                          'clean working tree' if git['dirty'] is False else
+                          'Working-tree state unknown — metadata-only capture.')
                        if git['status'] == 'available' else git.get('message', 'Git unavailable'))
             notes += f'<p>Git: {e(details)}</p><p>Exclusions: {e(", ".join(checkpoint["exclusions"]) or "none")}</p>'
         roots.append(f'<div><h2>{label.title()}</h2>{name}<p>{e(comparison[label]["root"])}</p>'

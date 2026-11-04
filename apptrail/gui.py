@@ -220,7 +220,7 @@ class AppTrail:
 
         if len(selected) == 1 and selected[0] in self.history_entries and checkpoint:
             git = checkpoint['git']
-            details = (f"Git {git['commit']} · {git['branch']} · {'uncommitted changes' if git['dirty'] else 'clean'}\n{git['subject'][:120]} · {git['author']} · {git['committed_at']}"
+            details = (f"Git {git['commit']} · {git['branch']} · {'uncommitted changes present' if git['dirty'] is True else 'clean working tree' if git['dirty'] is False else 'Working-tree state unknown — metadata-only capture.'}\n{git['subject'][:120]} · {git['author']} · {git['committed_at']}"
                        if git['status'] == 'available' else 'Git details unavailable')
             self.selection_info.set(self.selection_info.get() + '\nCheckpoint · ' + details +
                                     '\nExclusions: ' + (', '.join(checkpoint['exclusions']) or 'none'))
