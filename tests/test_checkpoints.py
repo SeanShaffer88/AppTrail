@@ -222,7 +222,7 @@ class MetadataSafetyTests(unittest.TestCase):
         import ast
         from types import SimpleNamespace
         source = Path(__file__).resolve().parents[1] / 'apptrail' / 'gui.py'
-        tree = ast.parse(source.read_text())
+        tree = ast.parse(source.read_text(encoding='utf-8'))
         method = next(node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)
                       and node.name == 'history_selection_changed')
         namespace = {}
