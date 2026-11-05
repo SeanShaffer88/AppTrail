@@ -43,6 +43,43 @@ class HistoryGuiTests(unittest.TestCase):
             time.sleep(.01)
         self.assertFalse(self.app.busy, 'Background operation did not finish')
 
+    def test_worker_polling_runs_only_until_terminal_event(self):
+        self.assertIsNone(self.app.poll_id)
+
+        def job():
+            for _ in range(251):
+                self.app.events.put(('progress', 'Working'))
+            return ('imported', [], [])
+
+        self.app.run_job(job)
+        self.assertIsNotNone(self.app.poll_id)
+        self.finish_job()
+        self.assertIsNone(self.app.poll_id)
+        self.assertEqual(self.app.status.get(), 'Imported 0 snapshot(s) · 0 failed')
+
+    def test_close_cancels_pending_worker_poll(self):
+        with patch('apptrail.gui.threading.Thread'):
+            self.app.run_job(lambda: None)
+        callback = self.app.poll_id
+        with patch.object(self.root, 'after_cancel', wraps=self.root.after_cancel) as cancel:
+            self.app.close()
+            cancel.assert_called_once_with(callback)
+        self.assertTrue(self.app.stop.is_set())
+        self.assertIsNone(self.app.poll_id)
+
+
+    def test_close_during_worker_start_error_does_not_rearm_poll(self):
+        with patch('apptrail.gui.threading.Thread.start', side_effect=RuntimeError('Cannot start worker')):
+            self.app.run_job(lambda: None)
+        with patch('apptrail.gui.messagebox.showerror', side_effect=lambda *_: self.app.close()) as error:
+            with patch.object(self.root, 'report_callback_exception') as callback_error:
+                self.finish_job()
+                callback_error.assert_not_called()
+            error.assert_called_once_with('AppTrail', 'Cannot start worker')
+        self.assertTrue(self.app.closed)
+        self.assertIsNone(self.app.poll_id)
+
+
     def test_real_checkpoint_dialog_saves_rules_and_uses_theme(self):
         from apptrail.gui import CheckpointDialog
         def fill():

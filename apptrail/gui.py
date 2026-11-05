@@ -31,6 +31,8 @@ class AppTrail:
         self.events = queue.Queue()
         self.stop = threading.Event()
         self.busy = False
+        self.closed = False
+        self.poll_id = None
         self.comparison = None
         self.buttons = []
         style = ttk.Style(root)
@@ -116,7 +118,6 @@ class AppTrail:
         self.progress.pack(before=bottom, side='bottom', fill='x', pady=(8, 0))
         root.protocol('WM_DELETE_WINDOW', self.close)
         self.refresh_history()
-        self.poll_id = root.after(100, self.poll)
 
     def change_theme(self):
         # Checkbutton has already changed the value; toggle saves and applies it.
@@ -406,7 +407,11 @@ class AppTrail:
                 self.events.put(('done', job()))
             except Exception as exc:
                 self.events.put(('error', str(exc)))
-        threading.Thread(target=worker, daemon=True).start()
+        try:
+            threading.Thread(target=worker, daemon=True).start()
+        except RuntimeError as exc:
+            self.events.put(('error', str(exc)))
+        self.poll_id = self.root.after(100, self.poll)
 
     def capture(self, save_as=False):
         if self.busy:
@@ -490,6 +495,9 @@ class AppTrail:
         self.run_job(job)
 
     def poll(self):
+        self.poll_id = None
+        if self.closed:
+            return
         latest = None
         for _ in range(250):
             try:
@@ -540,9 +548,13 @@ class AppTrail:
                 self.refresh()
                 self.tabs.select(self.comparison_tab)
                 self.status.set('Comparison ready · Export a report to preserve the evidence')
+            break
+        if self.closed:
+            return
         if latest:
             self.status.set(latest[:150])
-        self.poll_id = self.root.after(100, self.poll)
+        if self.busy and self.poll_id is None:
+            self.poll_id = self.root.after(100, self.poll)
 
     def refresh(self):
         if not self.comparison:
@@ -583,9 +595,15 @@ class AppTrail:
             webbrowser.open(Path(path).resolve().as_uri())
 
     def close(self):
+        if self.closed:
+            return
+        self.closed = True
         if self.busy:
             self.stop.set()
-        self.root.after_cancel(self.poll_id)
+            self.progress.stop()
+        if self.poll_id is not None:
+            self.root.after_cancel(self.poll_id)
+            self.poll_id = None
         self.root.destroy()
 
 
